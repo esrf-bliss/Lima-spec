@@ -1,0 +1,445 @@
+#%TITLE% limaroi.mac
+#%NAME% LIMA CCD ROI pseudo counters
+#%DESCRIPTION%
+# Implements ROIs as pseudo counters for LIMA CCD
+#
+#
+#%END%
+
+#%CATEGORY% Detection, Ccd
+
+#%IU% ()
+#%MDESC%
+# Initialise associative array %B%LIMA_ROI%B% and create user_getcounts cdef
+#
+def _limaroi_init() '{
+  global LIMA_ROI[]
+  if (list_n(LIMA_ROI)<0)
+    list_init LIMA_ROI
+	cdef("user_getcounts", "_limaroi_getcounts\n", "lima", 0x20)
+}'
+
+#%UU% <ccdname> <roimne> <xbeg> <xend> <ybeg> <yend> 
+#%MDESC% 
+# Add or Modify a ROI
+#
+def limaroiadd '{
+  if ($#!=6) {
+    print "Usage: $0 <ccdname> <roimne> <xbeg> <xend> <ybeg> <yend>"
+    exit
+  }
+	_limaroi_add("$1", "$2", $3, $4, $5, $6)
+}'
+
+#%IU% (ccdname, mne, xmin, xmax, ymin, ymax)
+#%MDESC% 
+# Add or Modify a ROI
+#
+def _limaroi_add(ccdname, roimne, xmin, xmax, ymin, ymax) '{
+
+  _limaroi_init()
+   
+	if (list_item(LIMA_ROI, roimne)==-1) 
+		list_add(LIMA_ROI, roimne)
+
+	LIMA_ROI[roimne]["ccdname"]= ccdname
+	LIMA_ROI[roimne]["xmin"]= xmin
+	LIMA_ROI[roimne]["xmax"]= xmax
+	LIMA_ROI[roimne]["ymin"]= ymin
+	LIMA_ROI[roimne]["ymax"]= ymax
+}'
+
+#%UU% <roimne>
+#%MDESC%
+# Remove the specified ROI
+#
+def limaroiremove '{
+  local roimne
+
+  if ($#!=1) {
+    print "Usage: $0 <roimne>"
+    exit
+  }
+  roimne= "$1"
+
+  if (list_check(LIMA_ROI, roimne)<=0) {
+    _lima_error ; printf("Unknown ROI <%s>\n", roimne)
+  } else {
+    _limaroi_remove(roimne)
+  }
+}'
+
+#%IU% (roimne)
+# Remove the specified ROI
+#
+def _limaroi_remove(roimne) '{
+  local roinum
+
+  list_remove(LIMA_ROI, roimne)
+  if ((roinum= cnt_num(roimne))!=-1) {
+    S[roinum]= 0
+  }
+}'
+
+#%UU% <ccdname>
+#%MDESC%
+# Remove all ROIs for CCD <ccdname>
+#%BR% If <ccdname> == %B%*%B%, remove all ROIs for all CCDs
+#
+def limaroireset '{
+  local ccdname
+  if ($#!=1) {
+    print "Usage: $0 <ccdname>"
+    print "  If <ccdname>=="*", remove rois for all ccds"
+    exit
+  }
+  ccdname= "$1"
+  if ((ccdname != "*")&&(list_check(LIMA_DEV, ccdname)<=0)) {
+      _lima_error ; printf("Unknown LIMA CCD <%s>\n", ccdname)
+  } else {
+    _limaroi_reset(ccdname)
+  }
+}'
+  
+#%IU% (ccdname)
+#%MDESC% 
+# Remove all ROIs for CCD <ccdname>
+#%BR% If <ccdname> == %B%*%B%, remove all ROIs for all CCDs
+#
+def _limaroi_reset(ccdname) '{
+  local iroi roimne roinum 
+  local delroi[] nroi
+
+  if (ccdname=="*") {
+    for (iroi=1; iroi<=list_n(LIMA_ROI); iroi++) {
+      roimne= list_item(LIMA_ROI, iroi)
+      if ((roinum=cnt_num(roimne)) != -1) {
+        S[roinum]= 0
+      }
+    }
+    list_init LIMA_ROI
+  } else {
+     nroi= 0
+     for (iroi=1; iroi<=list_n(LIMA_ROI); iroi++) {
+      roimne= list_item(LIMA_ROI, iroi)
+      if (LIMA_ROI[roimne]["ccdname"]==ccdname) {
+        delroi[nroi++]= roimne
+        if ((roinum=cnt_num(roimne)) != -1) {
+          S[roinum]= 0
+        }
+      }
+    }
+    for (iroi=0; iroi<nroi; iroi++)
+      list_remove(LIMA_ROI, delroi[iroi])
+  }
+}'
+
+#%UU% <old_mne> <new_mne>
+#%MDESC%
+# Rename the ROI <old_mne> to <new_mne> keeping same ROI parameters
+#
+def limaroirename '{
+  local oldmne newmne
+  if ($#!=2) {
+    print "Usage: $0 <old_mne> <new_mne>"
+    exit
+  }
+  oldmne= "$1"
+  newmne= "$2"
+  if (list_check(LIMA_ROI, oldmne)<=0) {
+    _lima_error ; printf("Unknown ROI <%s>\n", oldmne)
+  } else {
+    _limaroi_rename(oldmne, newmne)
+  }
+}' 
+
+#%IU% (old_mne, new_mne)
+#%MDESC%
+# Rename the ROI <old_mne> to <new_mne> keeping same ROI parameters
+#
+def _limaroi_rename(oldmne, newmne) '{
+	_limaroi_add(LIMA_ROI[oldmne]["ccdname"], newmne, \
+                LIMA_ROI[oldmne]["xmin"], LIMA_ROI[oldmne]["xmax"], \
+				        LIMA_ROI[oldmne]["ymin"], LIMA_ROI[oldmne]["ymax"])
+	_limaroi_remove(oldmne)
+}'
+
+#%IU%
+#%MDESC% 
+# sum counts over ROI into corresponding spec counter.
+def _limaroi_getcounts '{
+	local iroi roimne roinum
+  local ccdname ccdunit arrname
+	local xi xa yi ya
+
+  for (iroi= 1; iroi<=list_n(LIMA_ROI); iroi++) {
+    roimne= list_item(LIMA_ROI, iroi)
+    roinum= cnt_num(roimne)
+    ccdname= LIMA_ROI[roimne]["ccdname"]
+    ccdunit= LIMA_DEV[ccdname]["unit"]
+    if ((CCD_ON[ccdunit])&&(roinum!=-1)&&(counter_par(roinum, "disable")!=1) {
+      arrname= sprintf("image_data%d", ccdunit)
+      xi= LIMA_ROI[roimne]["xmin"]
+      xa= LIMA_ROI[roimne]["xmax"]
+      yi= LIMA_ROI[roimne]["ymin"]
+      ya= LIMA_ROI[roimne]["ymax"]
+      S[roinum]= array_op("sum", @arrname[xi:xa][yi:ya])
+    }
+  }
+}'
+
+#%UU% [<ccdname>]
+#%MDESC%
+# Show a menu allowing all modification on ROIs settings
+#
+def limaroi '{
+  local ccdname
+
+  ccdname= ($#==1) ? "$1" : 0
+  if (ccdname) {
+    if (list_check(LIMA_DEV, ccdname)<=0) {
+      _lima_error ; printf("Unknown LIMA CCD <%s>\n", ccdname)
+    } else {
+      _limaroi_menu(ccdname)
+    }
+  } else {
+    if (list_n(LIMA_DEV)==1) {
+      idev= 1
+    } else {
+      for (idev=1; idev<=list_n(LIMA_DEV); idev++) {
+        ccdname= list_item(LIMA_DEV, idev)
+        printf(" (%d) %s (%s, %s)\n", idev, ccdname, \
+              LIMA_DEV[ccdname]["control"], LIMA_DEV[ccdname]["config"])
+      }
+      idev= getval(" >> Select one CCD", 0)
+    }
+    if ((idev>0)&&(idev<=list_n(LIMA_DEV)))
+      _limaroi_menu(list_item(LIMA_DEV, idev))
+  }
+}'
+      
+#%IU% (ccdname)
+#%MDESC% 
+# Menu to Add/Modify/Delete/Save/Load ROIs of CCD <ccdname>
+#
+def _limaroi_menu(ccdname)'{
+  local nb key
+  local cmne xmin xmax ymin ymax
+  local ccdunit arrname
+	local file
+
+  ccdunit= LIMA_DEV[ccdname]["unit"]
+  arrname= sprintf("image_data%d", ccdunit)
+
+	while (1) {
+		nb= _limaroi_show(ccdname)
+		tty_move(0,nb++, "\[md\]A\[se\]dd/\[md\]R\[se\]emove/\[md\]M\[se\]odify ROI(s),") 
+		tty_move(0,nb++, "\[md\]L\[se\]oad from/\[md\]S\[se\]ave to file,  or \[md\]Q\[se\]uit (0)? ")
+
+		while ((key=input(-1))=="") {}
+		key=substr(key,1,1)
+		printf("\n\n")
+
+		if (key=="q"||key=="Q"||asc(key)==10) break
+		else if (key=="r"||key=="R") {
+			cmne= getval("Counter mnemonic",0)
+			if (cmne!="0") {
+        if (cmne=="*")
+          _limaroi_reset(ccdname)
+        else
+          _limaroi_remove(cmne)
+      }
+		}
+		else if (key=="a"||key=="A") {
+			cmne= getval(" > Counter mnemonic    ", 0)
+			if (cmne) {
+				xmax= array_op("rows", @arrname)-1
+				ymax= array_op("cols", @arrname)-1
+				xmin= getval(" > X min  ", 0)
+				xmax= getval(" > X max  ", xmax)
+				ymin= getval(" > Y min  ", 0)
+				ymax= getval(" > Y max  ", ymax)
+				_limaroi_add(ccdname, cmne, xmin, xmax, ymin, ymax)
+			}
+		}
+		else if (key=="m"||key=="M") {
+			cmne= getval(" > Counter mnemonic       ", 0)
+			if (list_check(LIMA_ROI, cmne)>0) {
+				xmin= getval(" > X min          ", LIMA_ROI[cmne]["xmin"])
+				xmax= getval(" > X max          ", LIMA_ROI[cmne]["xmax"])
+				ymin= getval(" > Y min          ", LIMA_ROI[cmne]["ymin"])
+				ymax= getval(" > Y max          ", LIMA_ROI[cmne]["ymax"])
+				_limaroi_add(ccdname, cmne, xmin, xmax, ymin, ymax)
+			}
+		}
+		else if (key=="s"||key=="S") {
+			file= getval("Save ROIs to file [0:default file]", 0)
+			if (file=="0") {
+        _limaroi_save(ccdname, 0)
+			} else {
+        _limaroi_save(ccdname, file)
+      }
+			input("... Press Enter ...")
+		}
+		else if (key=="l"||key=="L") {
+			file= getval("Load ROIs from file [0:default file]", 0)
+			if (file=="0") {
+        _limaroi_load(ccdname, 0)
+      } else {
+        _limaroi_load(ccdname, file)
+      }
+			input("... Press Enter ...")
+		}
+	}
+}'
+
+#%IU% (ccdname)
+#%MDESC%
+# Shows ROIs definition for CCD <ccdname>
+#
+def _limaroi_show(ccdname) '{
+  local iroi nb roimne
+	local cmne xmin xmax ymin ymax status
+
+  _limaroi_init()
+
+	clscreen()
+	tty_move(20,0,sprintf("\[md\]< MAXIPIX ROI on %s >\[me\]", ccdname))
+	tty_move(0,2,"           Counter     Xmin   Xmax   Ymin   Ymax.")
+    
+	nb= 3
+	for (iroi=1; iroi<=list_n(LIMA_ROI); iroi++) {
+		roimne= list_item(LIMA_ROI, iroi)
+    if (LIMA_ROI[roimne]["ccdname"]==ccdname) {
+		  xmin= LIMA_ROI[roimne]["xmin"]
+		  xmax= LIMA_ROI[roimne]["xmax"]
+		  ymin= LIMA_ROI[roimne]["ymin"]
+		  ymax= LIMA_ROI[roimne]["ymax"]
+      status = (cnt_num(roimne)==-1)?"    Not in config !!!":""
+		  tty_move(0, nb++, sprintf("\[md\]%18s   %6s %6s %6s %6s\[me\] %s", \
+				                roimne, xmin, xmax, ymin, ymax, status))
+    }
+	}
+	tty_move(0,nb++,"--------------------------------------------------------")
+	nb++
+	return (nb)
+}'
+
+
+#%UU% <ccdname> [<filename>]
+#%MDESC% 
+# Save ROIs definition of CCD <ccdname> in a file. 
+#%BR% If <filename> is not specified, save to the standard location
+#
+def limaroisave '{
+	local filename mne roi
+  
+  if (($#!=1)&&($#!=2)) {
+    print "Usage: $0 <ccdname> [<filename>]"
+    exit
+  }
+  ccdname= "$1"
+  filename= ($#==2) ? "$2" : 0
+
+  if (list_check(LIMA_DEV, ccdname)<=0) {
+    _lima_error ; printf("Unknown LIMA CCD <%s>\n", ccdname)
+  } else {
+    _limaroi_save(ccdname, filename)
+  }
+}'
+
+#%IU% (ccdname, filename)
+#%MDESC% 
+# Save ROIs definition of CCD <ccdname> in a file. 
+#%BR% If <filename>==0, save to the standard location
+#
+def _limaroi_save(ccdname, filename) '{
+  if (!filename) {
+    file= sprintf("%s/local/spec/userconf/limaroi_%s.def.%s", BLISSADM, ccdname, USER)
+  } else {
+    file= filename
+  }
+  if (file_info(file, "-e")) {
+    unix(sprintf("/bin/rm -f %s", file))
+  }
+
+  if (on(file)==-1) {
+    _lima_error ccdname ; printf("Cannot open file <%s>\n", file)
+  } else {
+    offt
+    printf("# LIMA ROI %s\n", ccdname)
+    printf("# name xmin xmax ymin ymax\n")
+    for (iroi=1; iroi<=list_n(LIMA_ROI); iroi++) {
+      roimne= list_item(LIMA_ROI, iroi)
+      printf("%s %d %d %d %d \n", roimne, LIMA_ROI[roimne]["xmin"], \
+            LIMA_ROI[roimne]["xmax"], LIMA_ROI[roimne]["ymin"], \
+            LIMA_ROI[roimne]["ymax"])
+    }
+    ont; close(file)
+    _lima_trace ccdname ; printf("Saved ROIs to <%s>\n", file)
+  }
+}'
+
+#%UU% <ccdname> [<filename>]
+#%MDESC% 
+# Load ROIs definition for CCD <ccdname> from a file. 
+#%BR% If <filename> is not specified, save to the standard location
+#%BR% Loading rois from file will erase current roi settings.
+#
+def limaroiload '{
+	local ccdname filename
+  
+  if (($#!=1)&&($#!=2)) {
+    print "Usage: $0 <ccdname> [<filename>]"
+    exit
+  }
+  ccdname= "$1"
+  filename= ($#==2) ? "$2" : 0
+  
+  if (list_check(LIMA_DEV, ccdname)<=0) {
+    _lima_error ; printf("Unknown LIMA CCD <%s>\n", ccdname)
+  } else {
+    _limaroi_load(ccdname, filename)
+  }
+}'
+
+#%IU% (ccdname, filename)
+#%MDESC%
+# Load ROIs definition for CCD <ccdname> from a file. 
+#%BR% if <filename>==0, save to the standard location
+# 
+def _limaroi_load(ccdname, filename) '{
+  local file nroi line
+  local roimne xmin xmax ymin ymax
+
+  if (!filename) {
+    file= sprintf("%s/local/spec/userconf/limaroi_%s.def.%s", BLISSADM, ccdname, USER)
+  } else {
+    file= filename
+  }
+  if (!file_info(file, "-e")) {
+    _lima_error ccdname ; printf("Cannot find file <%s>\n", file)
+  } else {
+    _limaroi_reset(ccdname)
+    nroi= 0
+
+    for (line= getline(file); line!=-1; line=getline(file)) {
+      if (substr(line, 0, 1)=="#")
+        continue
+      if (sscanf(line, "%s %d %d %d %d", roimne, xmin, xmax, ymin, ymax)==5) {
+        _limaroi_add(ccdname, roimne, xmin, xmax, ymin, ymax)
+        nroi++
+      } else {
+        _lima_error ccdname ; printf("Wrong parameters on line <%s>\n", line)
+      }
+    }
+    getline(file, "close")
+    _lima_trace ccdname ; printf("%d ROIs loaded from <%s>\n", nroi, file)
+  }
+}'
+  
+#%MACROS%
+#%IMACROS%
+#%TOC%
+#%AUTHOR% E.Papillon, $Revision: $, $Date: $
+

@@ -1,0 +1,152 @@
+
+def limampxsetup(ccdname) '{
+  _limapar_controlinit(ccdname, 0)
+
+  _limapar_configadd(ccdname, "config_name", 0x10, 1)
+  _limapar_configadd(ccdname, "config_path", 0x10, 1)
+
+  _limapar_configadd(ccdname, "fill_mode", 0x14, 1)
+
+  _limapar_configadd(ccdname, "threshold", 0x13, 1)
+  _limapar_configadd(ccdname, "energy_threshold", 0x11, 1)
+  _limapar_configadd(ccdname, "threshold_noise", 0x13, 5, "long")
+  _limapar_configadd(ccdname, "energy_calibration", 0x13, 5, "double")
+
+  _limapar_configadd(ccdname, "gate_level", 0x14, 1)
+  _limapar_configadd(ccdname, "gate_mode", 0x14, 1)
+  _limapar_configadd(ccdname, "ready_level", 0x14, 1)
+  _limapar_configadd(ccdname, "ready_mode", 0x14, 1)
+  _limapar_configadd(ccdname, "trigger_level", 0x14, 1)
+}'
+
+#lima_addlimatype("Maxipix", "limampxsetup", "limampxmenu")
+
+def _limampx_menu_additem(items, parname, desc) '{
+  items[items["nb"]]["parname"]= parname
+  items[items["nb"]]["desc"]= desc
+  items["nb"]++
+}'
+
+def _limampx_menu_update(items, ccdname) '{
+  local idx
+  for (idx=0; idx<items["nb"]; idx++) {
+    items[idx]["value"]= _limapar_get(ccdname, items[idx]["parname"])
+  }
+}'
+  
+def _limampx_menu_printitem(items, nl, option, parname) '{
+  local idx str
+  idx= _limampx_menu_getidx(items, parname)
+  str= items[idx]["desc"] " "
+  while (length(str)<25) { str= str "." }
+  tty_move(5,nl, sprintf("(%d) %s = \[md\]%s\[me\]", \
+              option, str, items[idx]["value"]))
+}'
+
+def _limampx_menu_getidx(items, parname) '{
+  for (idx=0; idx<items["nb"]; idx++) {
+    if (items[idx]["parname"]==parname)
+      return idx
+  }
+  return (-1)
+}'
+  
+def _limampx_menu_ask(items, ccdname, parname) '{
+  local idx value
+  local nval vals[] ival ians
+
+  idx= _limampx_menu_getidx(items, parname)
+  arrname= LIMA_DEV[ccdname]["arrname"]
+
+  if (@arrname[parname]["property"]&0x04) {
+    nval= _limapar_getvaluelist(ccdname, parname, vals)
+    printf("%s :\n", items[idx]["desc"])
+    for (ival=0; ival<nval; ival++) {
+      if (vals[ival]==items[idx]["value"]) {
+        ians= ival
+      }
+      printf(" (%d) %s\n", ival, vals[ival])
+    }
+    ians= getval(">> Your choice", ians)
+    if ((ians>0)&&(ians<nval)) {
+      value= vals[ians]
+    } else {
+      value= items[idx]["value"]
+    }
+  } else {
+    value= getval(items[idx]["desc"], items[idx]["value"])
+  }
+  if (value != items[idx]["value"])
+    _limapar_set(ccdname, parname, value)
+}'
+
+def limampxmenu(ccdname) '{
+  global items[]
+  local nl option
+
+  _limampx_menu_additem(items, "config_name", "Configuration File")
+  _limampx_menu_additem(items, "config_path", "Configuration Path")
+  _limampx_menu_additem(items, "fill_mode", "Pixel Gap Filling Mode")
+  _limampx_menu_additem(items, "threshold", "Raw Threshold")
+  _limampx_menu_additem(items, "energy_threshold", "Energy Threshold")
+  _limampx_menu_additem(items, "gate_mode", "Gate Input Mode")
+  _limampx_menu_additem(items, "gate_level", "Gate Input Level")
+  _limampx_menu_additem(items, "trigger_level", "Trigger Input Level")
+  _limampx_menu_additem(items, "ready_mode", "Ready Ouput Mode")
+  _limampx_menu_additem(items, "ready_level", "Ready Output Level")
+
+  option= 1
+
+  while (option) {
+    nl= 0
+
+    _limampx_menu_update(items, ccdname)
+
+    tty_cntl("ho")
+    tty_cntl("cd")
+
+
+    tty_move(10,nl++, sprintf("\[md\]< %s configuration >\[me\]", ccdname))
+    tty_move(10,nl++, sprintf("Camera: \[md\]%s - %s\[me\]", \
+      LIMA_DEV[ccdname]["camera_type"], LIMA_DEV[ccdname]["camera_model"]))
+    tty_move(10,nl++, sprintf("Device: %s", LIMA_DEV[ccdname]["config"]))
+    nl+=2
+
+    tty_move(0, nl++, "(1) Configuration :")
+    _limampx_menu_printitem(items, nl++, 11, "config_name")
+    _limampx_menu_printitem(items, nl++, 12, "config_path")
+    _limampx_menu_printitem(items, nl++, 13, "fill_mode")
+    nl++
+
+    tty_move(0, nl++, "(2) Calibration :")
+    _limampx_menu_printitem(items, nl++, 21, "threshold")
+    _limampx_menu_printitem(items, nl++, 22, "energy_threshold")
+    nl++
+
+    tty_move(0, nl++, "(3) Input/Output Signals :")
+    _limampx_menu_printitem(items, nl++, 31, "gate_mode")
+    _limampx_menu_printitem(items, nl++, 32, "gate_level")
+    _limampx_menu_printitem(items, nl++, 33, "trigger_level")
+    _limampx_menu_printitem(items, nl++, 34, "ready_mode")
+    _limampx_menu_printitem(items, nl++, 35, "ready_level")
+
+    option= getval("\n\n\tOption ---> ", 0)
+    printf("\n\n")
+
+    if ((option==1)||(option==11))
+      _limampx_menu_ask(items, ccdname, "config_name")
+    if ((option==1)||(option==12))
+      _limampx_menu_ask(items, ccdname, "config_path")
+    #if ((option==1)||(option==13))
+    #  _limampx_asklistvalue("Pixel Gap Filling Mode", ccdname, "fill_mode", vals["fill_mode"])
+    #if ((option==2)||(option==21))
+    #  _limampx_askvalue("
+    #if ((option==2)||(option==22)) {}
+    #if ((option==3)||(option==31)) {}
+    #if ((option==3)||(option==32)) {}
+    #if ((option==3)||(option==33)) {}
+    #if ((option==3)||(option==34)) {}
+    #if ((option==3)||(option==35)) {}
+  }
+}'
+

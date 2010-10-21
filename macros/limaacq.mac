@@ -1,0 +1,214 @@
+#%TITLE% limaacq.mac
+#%NAME% LIMA CCD acquisition macro
+#%DESCRIPTION%
+# Acquisition macros for LIMA CCDs
+#
+#%END%
+
+#%CATEGORY% Detection, Ccd
+
+
+#%UU% <exposure_time> [<nb_frames>] [<interval_time>] [<display_rate>]
+#%MDESC%
+# Take a serie of images in multi-frame mode using current lima CCD device (set it using limalist/limadev) %BR%
+# %BR% %B%exposure_time%B% : exposure time per frame (sec)
+# %BR% %B%nb_frames%B% : total number of frames to acquire
+# %BR% %B%insterval_time%B% : interval time between frames programmed on the ccd controller
+# %BR% %B%display_rate%B% : by default, spec reads about 4 frames/sec to update shared memory for online display.
+# You can change that or set it to -1 if all frames need to be read for display
+# %BR% %BR%
+# Saving of frame can be enabled through ccdmenu
+def limatake '{
+  local ccdname ccdunit
+  local _expo _nimg _rate _fname _it_time
+
+  if (!$#) {
+	  print "Usage: $0 <exposure_time> [<nb_frames>] [<interval_time>] [<display_rate>]"
+    exit
+  }
+
+  if (!LIMA_UNIT) {
+    _lima_error; printf("No default lima ccd set !!\n")
+    exit
+  }
+  ccdname= LIMA_UNIT
+  ccdunit= LIMA_DEV[ccdname]["unit"]
+
+  _expo= $1
+
+  if (int($2)!=$2) {
+	  print "Ooops !! nb_frames is not an integer !!"
+	  print "         don\'t you mixed exposure_time and nb_frames ??"
+	  exit
+  }
+  _nimg= int($2)
+  if (!_nimg) _nimg= 1
+
+  if ($#>2) {
+	  if ($3 != $3+0.) {
+	    print "Ooops !! interval_time seems not a float value !!"
+	    exit
+	  }
+	  _it_time= "$3"
+  } else {
+	  _it_time= "0."
+  }
+
+  if (CCDREAD_MODE[ccdunit]==1) {
+    _rate= 0
+  } else {
+  	_rate= ($#==4) ? $4+0. : 0.25
+  }
+
+  if (CCDSAVE[ccdunit]==1) {
+	  if ((CCDSAVE_MODE[ccdunit]==1)||(CCDSAVE_MODE[ccdunit]==4)) {
+	    if (CCDSAVE_MODE[ccdunit]!=4) {
+		    printf("!!! WARNING: Saving not optimized !!!\n")
+		    printf("    --> Should better use <Dserver auto-save mode>\n\n")
+	    }
+	    _fname= sprintf("%s/%s%.4d%s", image_par(ccdunit, "file_dir"), \
+                                     image_par(ccdunit, "file_prefix"), \
+		    		                         image_par(ccdunit, "file_inum"), \
+                                     image_par(ccdunit, "file_suffix"))
+	    printf("Images saved in <%s> %s\n", _fname, (CCDSAVE_MODE[ccdunit]==4)?"(auto)":"")
+	  }
+  }
+
+  if (CCD_GUI[ccdunit]["on"])
+    ccd_display_start(ccdunit)
+
+  _limatake(ccdname, _expo, _nimg, _it_time, _rate)
+}'
+
+#%IU% (ccdname, expo, nimg, it_time, drate)
+def _limatake(ccdname, expo, nimg, it_time, drate) '{
+  local _ext_trig _it_back _clnup ccdunit
+
+  ccdunit= LIMA_DEV[ccdname]["unit"]
+
+  _ext_trig= image_par(ccdunit, "ext_trig")
+  _it_back= _limapar_get(ccdname, "latency_time")
+  _clnup= sprintf("_limatake_cleanup(%s,%d,%s); ", ccdname, _ext_trig, _it_back)
+  cdef("cleanup_once", _clnup, "limatake")
+
+  image_par(ccdunit, "ext_trig", 0)
+  # TOCHECK : workaround latency_time cannot be 0
+  _limapar_set(ccdname, "latency_time", it_time==0?1e-9:it_time)
+  _limaacq_start(ccdname, expo, nimg)
+
+  _limatake_wait(ccdname, drate)
+
+  cdef("cleanup_once", "", "limatake", "delete")
+  _limatake_cleanup(ccdname, _ext_trig, _it_back)
+}'
+
+#%IU% (ccdname, expo, nimg)
+def _limaacq_start(ccdname, expo, nimg) '{
+  local ccdunit
+  ccdunit= LIMA_DEV[ccdname]["unit"]
+  if (nimg > 1)
+    image_par(ccdunit, "images", nimg)
+  else
+    image_par(ccdunit, "images", 1)
+  image_par(ccdunit, "preset", expo)
+  image_par(ccdunit, "run")
+}'
+
+#%IU% (ccdname, etrig, it_time)
+def _limatake_cleanup(ccdname, etrig, it_time) '{
+  local ccdunit
+  ccdunit= LIMA_DEV[ccdname]["unit"]
+  image_par(ccdunit, "ext_trig", etrig)
+  image_par(ccdunit, "images", 1)
+  # TOCHECK : workaround latency_time cannot be 0
+  _limapar_set(ccdname, "latency_time", it_time==0?1e-9:it_time)
+}'
+
+#%IU% (ccdname, rate)
+def _limatake_wait(ccdname, rate) '{
+  global LIMATAKE_IDX[]
+  local ccdunit
+  ccdunit= LIMA_DEV[ccdname]["unit"]
+  LIMATAKE_IDX["nacq"]= -1
+  LIMATAKE_IDX["nread"]= -1
+  LIMATAKE_IDX["ndisp"]= -1
+  LIMATAKE_IDX["disprate"]= rate
+  LIMATAKE_IDX["disptime"]= 0.
+  LIMATAKE_IDX["nsave"]= -1
+  LIMATAKE_IDX["autosave"]= ((CCDSAVE_MODE[ccdunit]==4)&&CCDSAVE[ccdunit])
+  while (wait(0x24)) {
+    sleep(COUNTERSPOLLTIME)
+    _limatake_wait_loop(ccdname)
+  }
+  _limatake_wait_loop(ccdname)
+  printf("\n")
+}'
+
+#%IU% (ccdname)
+def _limatake_wait_loop(ccdname) '{
+	LIMATAKE_IDX["nacq"]= _limapar_get(ccdname, "last_image_ready")
+	if (LIMATAKE_IDX["autosave"])
+		LIMATAKE_IDX["nsave"]= _limapar_get(ccdname, "last_image_saved")
+  if (LIMATAKE_IDX["nacq"]!=-1) {
+  	_limatake_wait_msg(ccdname)
+    if (LIMATAKE_IDX["nacq"]>LIMATAKE_IDX["nread"])
+    	_limatake_wait_read(ccdname, LIMATAKE_IDX["nread"]+1, LIMATAKE_IDX["nacq"])
+  }
+}'
+
+#%IU% (ccdname, from, to)
+def _limatake_wait_read(ccdname, from, to) '{
+  local fidx arrname dispdone ccdunit
+  ccdunit= LIMA_DEV[ccdname]["unit"]
+  arrname= sprintf("image_data%d", ccdunit)
+  for (fidx= from; fidx<=to; fidx++) {
+    image_par(ccdunit, "get_offset", fidx)
+	  LIMATAKE_IDX["nread"]= fidx
+
+	  if ((LIMATAKE_IDX["disprate"]>0.) && !dispdone) {
+	    tps= time()
+	    if (tps - LIMATAKE_IDX["disptime"] > LIMATAKE_IDX["disprate"]) {
+     		image_get(ccdunit, @arrname)
+			  LIMATAKE_IDX["ndisp"]= fidx
+			  LIMATAKE_IDX["disptime"]= tps
+			  _limatake_wait_msg(ccdname)
+			  dispdone= 1
+		  }
+	  }
+	  if (LIMATAKE_IDX["disprate"]==-1) {
+	    image_get(ccdunit, @arrname)
+	    LIMATAKE_IDX["ndisp"]= fidx
+	    _limatake_wait_msg(ccdname)
+	  }
+	  if (CCDSAVE[ccdunit]&&(!LIMATAKE_IDX["autosave"])) {
+      local __ccd_u
+      __ccd_u= ccdunit
+     	__ccdsave
+     	LIMATAKE_IDX["nsave"]= fidx
+     	_limatake_wait_msg(ccdname)
+    }
+  }
+}'
+
+#%IU% (ccdname)
+def _limatake_wait_msg(ccdname) '{
+  _lima_trace ccdname
+  LIMATAKE_IDX["nacq"]= _limapar_get(ccdname, "last_image_ready")
+  if (LIMATAKE_IDX["nacq"]!=-1) {
+	  printf("Acquire #%d ", LIMATAKE_IDX["nacq"])
+  } else {
+    printf("Acquire DONE ")
+  }
+  if (LIMATAKE_IDX["ndisp"]!=-1)
+    printf("Display #%d ", LIMATAKE_IDX["ndisp"])
+  if (LIMATAKE_IDX["nsave"]!=-1)
+    printf("Save #%d ", LIMATAKE_IDX["nsave"])
+  printf("\r")
+}'
+
+
+#%MACROS%
+#%IMACROS%
+#%TOC%
+#%AUTHOR% E.Papillon, $Revision: $, $Date: $
+

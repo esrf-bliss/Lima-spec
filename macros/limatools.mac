@@ -56,51 +56,28 @@ def _limapar_parseargs '
 # Print a list of parameters (control or config) which has a specific property
 #
 def _limapar_printlist(ccdname, propmask) '{
-  local nctrl ictrl vctrl[]
-  local ncfg icfg vcfg[]
-  local str
+  local nval ival vals[]
+  local arrname str
+
+  arrname= LIMA_DEV[ccdname]["arrname"]
 
   printf("<%s> parameters :\n", ccdname)
-
-  printf("\n* \"control\" parameters :\n")
-  nctrl= _limapar_list(ccdname, "control", propmask, vctrl)
-  str= ""
-  for (ictrl= 0; ictrl<nctrl; ictrl++) {
-    str= str sprintf("  %-24.24s", vctrl[ictrl])
-    if (ictrl&&(ictrl%3==0)) {
-      print str
-      str= ""
+  nval= _limapar_list(ccdname, "control", propmask, vals)
+  if (nval) {
+    printf("\n* \"control\" parameters :\n")
+    for (ival= 0; ival<nval; ival++) {
+      printf(" - %-20s (%s)\n", vals[ival], @arrname[vals[ival]]["desc"])
     }
   }
-  if (ictrl%3) print str
-
-  printf("\n* \"config\" parameters :\n")
-  ncfg= _limapar_list(ccdname, "config", propmask, vcfg)
-  str= ""
-  for (icfg=0; icfg<ncfg; icfg++) {
-    str= str sprintf("  %-24.24s", vcfg[icfg])
-    if (icfg&&(icfg%3==0)) {
-      print str
-      str= ""
+  nval= _limapar_list(ccdname, "config", propmask, vals)
+  if (nval) {
+    printf("\n* \"config\" parameters :\n")
+    for (ival= 0; ival<nval; ival++) {
+      printf(" - %-20s (%s)\n", vals[ival], @arrname[vals[ival]]["desc"])
     }
   }
-  if (icfg%3) print str
 }'
 
-def _limapar_list(ccdname, devtype, propmask, vals) '{
-  local ipar arrname parname
-  arrname= LIMA_DEV[ccdname]["arrname"]
-  nval= 0
-  for (ipar=1; ipar<list_n(@arrname); ipar++) {
-    parname= list_item(@arrname, ipar)
-    if ((@arrname[parname]["devtype"]==devtype)&& \
-       ((!propmask) || (@arrname[parname]["property"]&propmask))) {
-        vals[nval++]= parname
-    }
-  }
-  return nval
-}'
-        
 #%UU% <ccdname> [<parname>]
 #%MDESC%
 # Without <parname>, print out all readable parmaters for CCD <ccdname>
@@ -108,6 +85,13 @@ def _limapar_list(ccdname, devtype, propmask, vals) '{
 #%BR% For array-type parameters :
 #%BR% - use syntax <parname>[index] to print out one array value
 #%BR% - use syntax <parname> to print all array values
+#%BR% Examples:
+#%BR% \t > %B%limaget%B% myccd shutter_mode
+#%BR% \t > - shutter_mode = AUTO_SEQUENCE
+#%BR% \t > %B%limaget%B% myccd threshold_noise
+#%BR% \t > - threshold_noise = 6100 6200 6300 6400
+#%BR% \t > %B%limaget%B% myccd threshold_noise[2]
+#%BR% \t > - threshold_noise[2] = 6300
 #
 def limaget '{
   if (($#!=1)&&($#!=2)) {
@@ -121,7 +105,7 @@ def limaget '{
       _lima_error ; printf("<%s> is not a LIMA CCD\n", "$1")
       exit
     }
-    _limapar_printlist(ccdname, 0x00)
+    _limapar_printlist(ccdname, LP_READ)
   } else {
     _limapar_parseargs $1 $2
 
@@ -147,17 +131,22 @@ def limaget '{
   }
 }'
 
-#%UU% <ccdname> [<parname> <value> [...<value>]]
+#%UU% <ccdname> [<parname> [<value> ... <value>]]
 #%MDESC%
 # Without <parname>, print out all writable parmaters for CCD <ccdname>
-#%BR% With valid <parname>, set parameter value to <value> for CCD <ccdname>.
+#%BR% With valid <parname>: 
+#%BR% if <value> given, set parameter value to <value> for CCD <ccdname>.
+#%BR% if <value> not given, ask for parameter new value and set it if different from the previous one.
 #%BR% For array-type parameters :
 #%BR% - use syntax <parname>[index] <value> to set one array value
 #%BR% - use syntax <parname> <value1> ... <valueN> to set all array values
+#%BR% Example:
+#%BR% \t > %B%limaset%B% threshold_noise 6100 6200 6300 6400
+#%BR% \t > %B%limaset%B% threshold_noise[2] 6300
 #
 def limaset '{
   if ($#<1) {
-    print "Usage: $0 <ccdname> [<parname> <value> [... <value>]]"
+    print "Usage: $0 <ccdname> [<parname> [<value> ... <value>]]"
     exit
   }
 
@@ -168,38 +157,48 @@ def limaset '{
       _lima_error ; printf("<%s> is not a LIMA CCD\n", "$1")
       exit
     }
-    _limapar_printlist(ccdname, 0x10)
+    _limapar_printlist(ccdname, LP_WRITE)
   } else {
     _limapar_parseargs $1 $2
 
-    local parsize partype
+    local parsize partype value
+    local iarg narg args[]
 
     parsize= @arrname[parname]["size"]
     partype= @arrname[parname]["type"]
 
-    if ((paridx==-1)&&(parsize>1)) {
-      local iarg narg args[]
-      narg= split("$*", args)
-      if ((narg-2) != parsize) {
-        _lima_error; printf("Number of values should be <%s>\n", parsize)
-      } else {
-        _limapar_initarr(parsize, partype)
-        for (iarg= 2; iarg<narg; iarg++) {
-          LIMA_VALS[iarg-2]= args[iarg]
-        }
-        _limapar_set(ccdname, parname, LIMA_VALS, -1)
-      }
+    if (($#==2)&&(parsize==1)) {
+      value= _limapar_get(ccdname, parname)
+      _limapar_ask(ccdname, parname, value)
     } else {
-      value= "$3"
-      if (value == value+0) {
-        _limapar_set(ccdname, parname, value*1., paridx)
+      if ((paridx==-1)&&(parsize>1)) {
+        narg= split("$*", args)
+        if ((narg-2) != parsize) {
+          _lima_error; printf("Number of values should be <%s>\n", parsize)
+        } else {
+          _limapar_initarr(parsize, partype)
+          for (iarg= 2; iarg<narg; iarg++) {
+            LIMA_VALS[iarg-2]= args[iarg]
+          }
+          _limapar_set(ccdname, parname, LIMA_VALS, -1)
+        }
       } else {
-        _limapar_set(ccdname, parname, value, paridx)
+        value= "$3"
+        if (value == value+0) {
+          _limapar_set(ccdname, parname, value*1., paridx)
+        } else {
+          _limapar_set(ccdname, parname, value, paridx)
+        }
       }
     }
   }
 }'
 
+#%UU% <ccdname> [<parname>]
+#%MDESC%
+# For string-list type parameters, get the list of possible string values.
+# %BR% if <parname> is omitted, print string list-type parameters of ccd <ccdname>
+#
 def limagetvaluelist '{
   if ($#<1) {
     print "Usage: $0 <ccdname> [<parname>]"
@@ -213,14 +212,14 @@ def limagetvaluelist '{
       _lima_error ; printf("<%s> is not a LIMA CCD\n", "$1")
       exit
     }
-    _limapar_printlist(ccdname, 0x04)
+    _limapar_printlist(ccdname, LP_LIST)
   } else {
-    local nval ival vals[]
+    local nval ival vals[] str
     _limapar_parseargs $1 $2
 
     nval= _limapar_getvaluelist(ccdname, parname, vals)
     for (ival= 0; ival<nval; ival++) {
-      str= " " vals[ival]
+      str= str " " vals[ival]
     }
     printf("Possible values for <%s> are:\n", parname)
     print str
@@ -246,6 +245,7 @@ def _limamot_init() '{
 #%MDESC%
 # With all parameters, %BR%
 # - setup parameter <parname> for CCD <ccdname> as pseudo motor <mot_mne>
+#%BR% \t For array-type parameter, specify array index as parname[index]
 #%BR% With only <ccdname> parameter: %BR%
 # - print out list of parameters for CCD <ccdname> which can be set as pseudo-motors
 #%BR%
@@ -265,7 +265,7 @@ def limamotsetup '{
       _lima_error ; printf("<%s> is not a LIMA CCD\n", "$1")
       exit
     }
-    _limapar_printlist(ccdname, 0x01)
+    _limapar_printlist(ccdname, LP_MOT)
   }
 	else {
     local motmne
@@ -273,7 +273,7 @@ def limamotsetup '{
 		motmne= "$3"
     if (motor_num(motmne)==-1) {
       _lima_error; printf("Invalid motor <%s>\n", motmne)
-    } else if ((@arrname[parname]["property"]&0x01) != 0x01) {
+    } else if ((@arrname[parname]["property"]&LP_MOT) != LP_MOT) {
 			_lima_error; printf("Cannot set <%s> as a motor\n", name)
     } else {
       _limamot_init()
@@ -306,6 +306,28 @@ def limamotunsetup '{
   }
 }'
 
+#%IU% (ccdname)
+#%MDESC%
+# Remove all pseudo motors belonging to <ccdname>
+def _limamot_reset(ccdname) '{
+  local imot nbdel todel[]
+
+  nbdel= 0
+  for (imot=1; imot<=list_n(LIMA_MOT); imot++) {
+    motmne= list_item(LIMA_MOT, imot)
+    if (LIMA_MOT[motmne]["ccdname"]==ccdname) {
+      todel[nbdel]= motmne
+      nbdel++
+    }
+  }
+  for (imot=0; imot<nbdel; imot++) {
+    list_remove(LIMA_MOT, todel[imot])
+  }
+  if (list_n(LIMA_MOT)<1) {
+    cdef("", "", "limamot", "delete")
+  }
+}'
+  
 #%UU% [<ccdname>]
 #%MDESC%
 # activate all pseudo motors for all CCDs or just <ccdname>
@@ -395,6 +417,7 @@ def _limacnt_init() '{
 #%MDESC%
 # With all parameters, %BR%
 # - setup parameter <parname> for CCD <ccdname> as pseudo motor <cnt_mne>
+#%BR% \t For array-type parameter, specify array index as parname[index]
 #%BR% With only <ccdname> parameter: %BR%
 # - print out list of parameters for CCD <ccdname> which can be set as pseudo-counters
 #%BR%
@@ -413,7 +436,7 @@ def limacntsetup '{
       _lima_error ; printf("<%s> is not a LIMA CCD\n", "$1")
       exit
     }
-    _limapar_printlist(ccdname, 0x02)
+    _limapar_printlist(ccdname, LP_CNT)
   }
 	else {
     local cntmne
@@ -421,7 +444,7 @@ def limacntsetup '{
 		cntmne= "$2"
 		if (cnt_num(cntmne)==-1) {
 			_lima_error; printf("Invalid counter <%s>\n", cntmne)
-    } else if (@arrname[parname]["property"]&0x02 != 0x02) {
+    } else if (@arrname[parname]["property"]&LP_CNT != LP_CNT) {
 			_lima_error; printf("Cannot set <%s> as a counter\n", name)
 		} else {
       _limacnt_init()
@@ -456,6 +479,29 @@ def limacntunsetup '{
     list_init LIMA_CNT
     cdef("", "", "limacnt", "delete")
   }
+}'
+
+#%IU% (ccdname)
+#%MDESC%
+# Remove all pseudo counters belonging to <ccdname>
+#
+def _limacnt_reset(ccdname) '{
+  for (icnt=1; icnt<=list_n(LIMA_CNT); icnt++) {
+    cmne= list_item(LIMA_CNT, icnt)
+    if (LIMA_CNT[cmne]["ccdname"]==ccdname) {
+      cnum= cnt_num(cmne)
+      if (cnum != -1) S[cnum]= 0
+      todel[nbdel]= cmne
+      nbdel++
+    }
+  }
+  for (icnt=0; icnt<nbdel; icnt++) {
+    list_remove(LIMA_CNT, todel[icnt])
+  }
+  if (list_n(LIMA_CNT)<1) {
+    cdef("", "", "limacnt", "delete")
+  }
+  LIMA_MOTON[ccdname]= 0
 }'
 
 #%IU%

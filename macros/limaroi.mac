@@ -16,7 +16,7 @@ def _limaroi_init() '{
   global LIMA_ROI[]
   if (list_n(LIMA_ROI)<0)
     list_init LIMA_ROI
-	cdef("user_getcounts", "_limaroi_getcounts\n", "lima", 0x20)
+	cdef("user_getcounts", "_limaroi_getcounts\n", "limaroi", 0x20)
 }'
 
 #%UU% <ccdname> <roimne> <xbeg> <xend> <ybeg> <yend> 
@@ -70,7 +70,8 @@ def limaroiremove '{
 }'
 
 #%IU% (roimne)
-# Remove the specified ROI
+#%MDESC%
+#  Remove the specified ROI
 #
 def _limaroi_remove(roimne) '{
   local roinum
@@ -78,6 +79,9 @@ def _limaroi_remove(roimne) '{
   list_remove(LIMA_ROI, roimne)
   if ((roinum= cnt_num(roimne))!=-1) {
     S[roinum]= 0
+  }
+  if (list_n(LIMA_ROI)<1) {
+    cdef("", "", "limaroi", "delete")
   }
 }'
 
@@ -131,6 +135,9 @@ def _limaroi_reset(ccdname) '{
     }
     for (iroi=0; iroi<nroi; iroi++)
       list_remove(LIMA_ROI, delroi[iroi])
+  }
+  if (list_n(LIMA_ROI)<1) {
+    cdef("", "", "limaroi", "delete")
   }
 }'
 
@@ -304,7 +311,7 @@ def _limaroi_show(ccdname) '{
   _limaroi_init()
 
 	clscreen()
-	tty_move(20,0,sprintf("\[md\]< MAXIPIX ROI on %s >\[me\]", ccdname))
+	tty_move(10,0,sprintf("\[md\]< LIMA ROI on %s >\[me\]", ccdname))
 	tty_move(0,2,"           Counter     Xmin   Xmax   Ymin   Ymax.")
     
 	nb= 3

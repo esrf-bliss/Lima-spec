@@ -88,12 +88,11 @@ def _limatake(ccdname, expo, nimg, it_time, drate) '{
 
   _ext_trig= image_par(ccdunit, "ext_trig")
   _it_back= _limapar_get(ccdname, "latency_time")
-  _clnup= sprintf("_limatake_cleanup(%s,%d,%s); ", ccdname, _ext_trig, _it_back)
+  _clnup= sprintf("_limatake_cleanup(\"%s\",%d,%g); ", ccdname, _ext_trig, _it_back)
   cdef("cleanup_once", _clnup, "limatake")
 
   image_par(ccdunit, "ext_trig", 0)
-  # TOCHECK : workaround latency_time cannot be 0
-  _limapar_set(ccdname, "latency_time", it_time==0?1e-9:it_time)
+  _limapar_set(ccdname, "latency_time", it_time)
   _limaacq_start(ccdname, expo, nimg)
 
   _limatake_wait(ccdname, drate)
@@ -120,8 +119,7 @@ def _limatake_cleanup(ccdname, etrig, it_time) '{
   ccdunit= LIMA_DEV[ccdname]["unit"]
   image_par(ccdunit, "ext_trig", etrig)
   image_par(ccdunit, "images", 1)
-  # TOCHECK : workaround latency_time cannot be 0
-  _limapar_set(ccdname, "latency_time", it_time==0?1e-9:it_time)
+  _limapar_set(ccdname, "latency_time", it_time)
 }'
 
 #%IU% (ccdname, rate)

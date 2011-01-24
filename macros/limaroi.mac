@@ -8,6 +8,19 @@
 
 #%CATEGORY% Detection, Ccd
 
+#%LOG%
+#
+#$Revision: 1.3 $
+#$Log: limaroi.mac,v $
+#Revision 1.3  2010/12/10 15:50:22  papillon
+#* correct xy orientation
+#
+#Revision 1.2  2010/11/22 14:56:46  claustre
+#added RCS tags + woraround in limampx to force spec resync. on image format
+#change
+#
+
+
 #%IU% ()
 #%MDESC%
 # Initialise associative array %B%LIMA_ROI%B% and create user_getcounts cdef
@@ -166,8 +179,8 @@ def limaroirename '{
 #
 def _limaroi_rename(oldmne, newmne) '{
 	_limaroi_add(LIMA_ROI[oldmne]["ccdname"], newmne, \
-                LIMA_ROI[oldmne]["xmin"], LIMA_ROI[oldmne]["xmax"], \
-				        LIMA_ROI[oldmne]["ymin"], LIMA_ROI[oldmne]["ymax"])
+               LIMA_ROI[oldmne]["xmin"], LIMA_ROI[oldmne]["xmax"], \
+	       LIMA_ROI[oldmne]["ymin"], LIMA_ROI[oldmne]["ymax"])
 	_limaroi_remove(oldmne)
 }'
 
@@ -184,13 +197,13 @@ def _limaroi_getcounts '{
     roinum= cnt_num(roimne)
     ccdname= LIMA_ROI[roimne]["ccdname"]
     ccdunit= LIMA_DEV[ccdname]["unit"]
-    if ((CCD_ON[ccdunit])&&(roinum!=-1)&&(counter_par(roinum, "disable")!=1) {
+    if ((CCD_ON[ccdunit])&&(roinum!=-1)&&(counter_par(roinum, "disable")!=1)) {
       arrname= sprintf("image_data%d", ccdunit)
       xi= LIMA_ROI[roimne]["xmin"]
       xa= LIMA_ROI[roimne]["xmax"]
       yi= LIMA_ROI[roimne]["ymin"]
       ya= LIMA_ROI[roimne]["ymax"]
-      S[roinum]= array_op("sum", @arrname[xi:xa][yi:ya])
+      S[roinum]= array_op("sum", @arrname[yi:ya][xi:xa])
     }
   }
 }'
@@ -260,8 +273,8 @@ def _limaroi_menu(ccdname)'{
 		else if (key=="a"||key=="A") {
 			cmne= getval(" > Counter mnemonic    ", 0)
 			if (cmne) {
-				xmax= array_op("rows", @arrname)-1
-				ymax= array_op("cols", @arrname)-1
+				xmax= array_op("cols", @arrname)-1
+				ymax= array_op("rows", @arrname)-1
 				xmin= getval(" > X min  ", 0)
 				xmax= getval(" > X max  ", xmax)
 				ymin= getval(" > Y min  ", 0)
@@ -448,5 +461,4 @@ def _limaroi_load(ccdname, filename) '{
 #%MACROS%
 #%IMACROS%
 #%TOC%
-#%AUTHOR% E.Papillon, $Revision: $, $Date: $
-
+#%AUTHOR% E.Papillon, $Revision: 1.3 $, $Date: 2010/12/10 15:50:22 $

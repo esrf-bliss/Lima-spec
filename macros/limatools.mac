@@ -9,6 +9,14 @@
 
 #%CATEGORY% Detection, Ccd
 
+#%LOG%
+#
+#$Revision: 1.3 $
+#$Log: limatools.mac,v $
+#Revision 1.3  2010/11/22 14:56:46  claustre
+#added RCS tags + woraround in limampx to force spec resync. on image format
+#change
+#
 
 #%IU%
 def _limapar_parseargs '
@@ -392,7 +400,7 @@ def _limamot_moveall '{
 		mmne= list_item(LIMA_MOT, imot)
 		mnum= motor_num(mmne)
     ccdname= LIMA_MOT[mmne]["ccdname"]
-		if ((LIMA_MOTON[ccdname]&&(mnum!=-1)&&(!motor_par(mnum, "disable"))) {
+		if ((LIMA_MOTON[ccdname]&&(mnum!=-1))&&(!motor_par(mnum, "disable"))) {
 			if ((!LIMA_MOT[mmne]["err"])&&(A[mnum]!=LIMA_MOT[mmne]["old"])) {
 				_limapar_set(ccdname, LIMA_MOT[mmne]["parname"], \
                       A[mnum], LIMA_MOT[mmne]["paridx"])
@@ -441,7 +449,7 @@ def limacntsetup '{
 	else {
     local cntmne
     _limapar_parseargs $1 $2
-		cntmne= "$2"
+		cntmne= "$3"
 		if (cnt_num(cntmne)==-1) {
 			_lima_error; printf("Invalid counter <%s>\n", cntmne)
     } else if (@arrname[parname]["property"]&LP_CNT != LP_CNT) {
@@ -525,5 +533,5 @@ def _limacnt_getcounts '{
 #%MACROS%
 #%IMACROS%
 #%TOC%
-#%AUTHOR% E.Papillon, $Revision: $, $Date: $
+#%AUTHOR% E.Papillon, $Revision: 1.3 $, $Date: 2010/11/22 14:56:46 $
 

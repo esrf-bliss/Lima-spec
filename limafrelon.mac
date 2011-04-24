@@ -59,6 +59,7 @@ def limafrelonmenu(ccdname) '{
   items["roi_mode"] = "NONE"
   items["roi_bin_offset"] = -1
   items["e2v_correction"] = "OFF"
+  items["input_channel"] = "1-2-3-4"
   option= 1
 
   while (option) {
@@ -75,9 +76,10 @@ def limafrelonmenu(ccdname) '{
 
     tty_move(0, nl++, "(2) Configuration :")
     _limamenu_printitem(ccdname, "image_mode", items["image_mode"], nl++,21)
-    _limamenu_printitem(ccdname, "roi_mode",items["roi_mode"], nl++,22)
-    _limamenu_printitem(ccdname, "roi_bin_offset",items["roi_bin_offset"],nl++,23)
-    _limamenu_printitem(ccdname, "e2v_correction",items["e2v_correction"],nl++,24)
+    _limamenu_printitem(ccdname, "input_channel", items["input_channel"], nl++,22)
+    _limamenu_printitem(ccdname, "roi_mode",items["roi_mode"], nl++,23)
+    _limamenu_printitem(ccdname, "roi_bin_offset",items["roi_bin_offset"],nl++,24)
+    _limamenu_printitem(ccdname, "e2v_correction",items["e2v_correction"],nl++,25)
     nl++
 
     option= getval("\n\n\tOption ---> ", 0)
@@ -86,10 +88,12 @@ def limafrelonmenu(ccdname) '{
     if((option=2) || (option=21))
       _limapar_ask(ccdname, "image_mode",items["image_mode"])
     if((option=2) || (option=22))
-      _limapar_ask(ccdname, "roi_mode",items["roi_mode"])
+      _limapar_ask(ccdname, "input_channel",items["input_channel"])
     if((option=2) || (option=23))
-      _limapar_ask(ccdname, "roi_bin_offset",items["roi_bin_offset"])
+      _limapar_ask(ccdname, "roi_mode",items["roi_mode"])
     if((option=2) || (option=24))
+      _limapar_ask(ccdname, "roi_bin_offset",items["roi_bin_offset"])
+    if((option=2) || (option=25))
       _limapar_ask(ccdname, "e2v_correction",items["e2v_correction"])
   }
 }'

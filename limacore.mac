@@ -367,7 +367,6 @@ def _limapar_controlinit(ccdname, version) '{
 # callback on parameter set
 #
 def _limacontrol_setpar(ccdname, parname, value) '{
-  _lima_trace ccdname; printf("CB on <%s>\n", parname)
  if (parname == "acq_mode") {
    #need to inform SPEC about image type change
    local unit

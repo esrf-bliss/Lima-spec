@@ -226,11 +226,16 @@ def limagetvaluelist '{
     _limapar_parseargs $1 $2
 
     nval= _limapar_getvaluelist(ccdname, parname, vals)
-    for (ival= 0; ival<nval; ival++) {
-      str= str " " vals[ival]
+    if (nval>0) {
+      printf("Possible values for <%s> are:\n", parname)
+      for (ival= 0; ival<nval; ival++) {
+        print " *", vals[ival]
+      }
+    } else if (nval==-1) {
+      _lima_error ccdname ; printf("Cannot get value list for <%s>\n", parname)
+    } else {
+      _lima_error ccdname ; printf("<%s> is not a value list type !!\n", parname)
     }
-    printf("Possible values for <%s> are:\n", parname)
-    print str
   }
 }'
 
@@ -440,7 +445,7 @@ def limacntsetup '{
   else if ($#==1) {
     local ccdname
     ccdname= "$1"
-    if (!list_check(LIMA_DEV, "$1")<=0) {
+    if (list_check(LIMA_DEV, ccdname)<=0) {
       _lima_error ; printf("<%s> is not a LIMA CCD\n", "$1")
       exit
     }

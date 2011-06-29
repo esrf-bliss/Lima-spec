@@ -5,10 +5,10 @@ def limapilatussetup(ccdname) '{
   _limapar_controlinit(ccdname, 0)
 
   # --- parameter definition
-  _limapar_addconfig(ccdname, "threshold_gain", LP_WRITE|LP_LIST, 1)
-  _limapar_addconfig(ccdname, "threshold", LP_WRITE, 1,"long")
-  _limapar_addconfig(ccdname, "energy_threshold", LP_WRITE|LP_MOT, 1,"double")
-  _limapar_addconfig(ccdname, "fill_mode",LP_WRITE|LP_LIST,1)
+  _limapar_addconfig(ccdname, "threshold_gain", LP_RW|LP_LIST, 1)
+  _limapar_addconfig(ccdname, "threshold", LP_RW, 1,"long")
+  _limapar_addconfig(ccdname, "energy_threshold", LP_RW|LP_MOT, 1,"double")
+  _limapar_addconfig(ccdname, "fill_mode",LP_RW|LP_LIST,1)
 
   # --- parameter description
   _limapar_addtext(ccdname, "threshold_gain", "Threshold Gain")

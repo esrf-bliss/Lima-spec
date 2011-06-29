@@ -1,10 +1,11 @@
 #%NAME% 
 #  Specific macros for Lima Maxipix detector 
-#%CATEGORY% Detection, Ccd
-
-#%LOG%
+# %BR% $Revision: 1.3 $ $Date: $
 #
-#$Revision: 1.3 $
+#%CATEGORY% Detection, Ccd
+#
+#%END%
+
 #$Log: limampx.mac,v $
 #Revision 1.3  2010/11/22 16:53:11  claustre
 #corrected 2 options using same input key "33"
@@ -20,22 +21,22 @@ def limampxsetup(ccdname) '{
   _limapar_controlinit(ccdname, 0)
 
   # --- parameter definition
-  _limapar_addconfig(ccdname, "config_name", LP_WRITE|LP_LIST|LP_CB, 1)
-  _limapar_addconfig(ccdname, "config_path", LP_WRITE, 1)
+  _limapar_addconfig(ccdname, "config_name", LP_RW|LP_LIST|LP_CB, 1)
+  _limapar_addconfig(ccdname, "config_path", LP_RW, 1)
 
-  _limapar_addconfig(ccdname, "fill_mode", LP_WRITE|LP_LIST, 1)
+  _limapar_addconfig(ccdname, "fill_mode", LP_RW|LP_LIST, 1)
 
-  _limapar_addconfig(ccdname, "threshold", LP_WRITE|LP_MOT, 1)
-  _limapar_addconfig(ccdname, "energy_threshold", LP_WRITE|LP_MOT, 1)
-  _limapar_addconfig(ccdname, "threshold_noise", LP_WRITE|LP_MOT, 5, "long")
-  _limapar_addconfig(ccdname, "energy_calibration", LP_WRITE|LP_MOT, 5, "double")
+  _limapar_addconfig(ccdname, "threshold", LP_RW|LP_MOT, 1)
+  _limapar_addconfig(ccdname, "energy_threshold", LP_RW|LP_MOT, 1)
+  _limapar_addconfig(ccdname, "threshold_noise", LP_RW|LP_MOT, 5, "long")
+  _limapar_addconfig(ccdname, "energy_calibration", LP_RW|LP_MOT, 5, "double")
 
-  _limapar_addconfig(ccdname, "gate_level", LP_WRITE|LP_LIST, 1)
-  _limapar_addconfig(ccdname, "gate_mode", LP_WRITE|LP_LIST, 1)
-  _limapar_addconfig(ccdname, "ready_level", LP_WRITE|LP_LIST, 1)
-  _limapar_addconfig(ccdname, "ready_mode", LP_WRITE|LP_LIST, 1)
-  _limapar_addconfig(ccdname, "trigger_level", LP_WRITE|LP_LIST, 1)
-  _limapar_addconfig(ccdname, "shutter_level", LP_WRITE|LP_LIST, 1)
+  _limapar_addconfig(ccdname, "gate_level", LP_RW|LP_LIST, 1)
+  _limapar_addconfig(ccdname, "gate_mode", LP_RW|LP_LIST, 1)
+  _limapar_addconfig(ccdname, "ready_level", LP_RW|LP_LIST, 1)
+  _limapar_addconfig(ccdname, "ready_mode", LP_RW|LP_LIST, 1)
+  _limapar_addconfig(ccdname, "trigger_level", LP_RW|LP_LIST, 1)
+  _limapar_addconfig(ccdname, "shutter_level", LP_RW|LP_LIST, 1)
 
   # --- callback macro on parameter set
   _limapar_addconfig_cb(ccdname, "_limampx_setpar")

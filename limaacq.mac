@@ -18,30 +18,32 @@
 
 #%UU% <exposure_time> [<nb_frames>] [<interval_time>] [<display_rate>]
 #%MDESC%
-# Take a serie of images in multi-frame mode using current lima CCD device (set it using limalist/limadev) %BR%
+# Take a serie of images in multi-frame mode using active lima CCD device(s) (active lima ccd
+# has to be set using %B%limaon/off%B% . Check it with %B%limalist%B%) %BR%
 # %BR% %B%exposure_time%B% : exposure time per frame (sec)
 # %BR% %B%nb_frames%B% : total number of frames to acquire
-# %BR% %B%insterval_time%B% : interval time between frames programmed on the ccd controller
+# %BR% %B%interval_time%B% : interval time between frames programmed on the ccd controller
 # %BR% %B%display_rate%B% : by default, spec reads about 4 frames/sec to update shared memory for online display.
-# You can change that or set it to -1 if all frames need to be read for display
+# You can change that and set it to: %B%0%B% to have no image reading, %B%-1%B% to force reading all images, %B%>0%B% to change the approximate reading rate.
 # %BR% %BR%
 # Saving of frame can be enabled through ccdmenu
 def limatake '{
-  local ccdname ccdunit
   local _expo _nimg _rate _fname _it_time
+  local nccd ccds[]
 
   if (!$#) {
 	  print "Usage: $0 <exposure_time> [<nb_frames>] [<interval_time>] [<display_rate>]"
     exit
   }
 
-  if (!LIMA_UNIT) {
-    _lima_error; printf("No default lima ccd set !!\n")
+  # -- active ccds
+  nccd= _lima_getactive(ccds)
+  if (!nccd) {
+    _lima_error; printf("No active lima ccd. Use limaon first.\n")
     exit
   }
-  ccdname= LIMA_UNIT
-  ccdunit= LIMA_DEV[ccdname]["unit"]
 
+  # -- expo time
   _expo= $1
 
   if (int($2)!=$2) {
@@ -49,169 +51,351 @@ def limatake '{
 	  print "         don\'t you mixed exposure_time and nb_frames ??"
 	  exit
   }
+
+  # -- number of images
   _nimg= int($2)
   if (!_nimg) _nimg= 1
 
+  # -- interval time between images
   if ($#>2) {
 	  if ($3 != $3+0.) {
 	    print "Ooops !! interval_time seems not a float value !!"
 	    exit
 	  }
-	  _it_time= "$3"
+	  _it_time= $3
   } else {
-	  _it_time= "0."
+	  _it_time= 0.
   }
 
-  if (CCDREAD_MODE[ccdunit]==1) {
-    _rate= 0
-  } else {
-  	_rate= ($#==4) ? $4+0. : 0.25
-  }
+  # -- read rate
+  _rate= ($#==4) ? $4+0. : (0.25*nccd)
 
-  if (CCDSAVE[ccdunit]==1) {
-	  if ((CCDSAVE_MODE[ccdunit]==1)||(CCDSAVE_MODE[ccdunit]==4)) {
-	    if (CCDSAVE_MODE[ccdunit]!=4) {
-		    printf("!!! WARNING: Saving not optimized !!!\n")
-		    printf("    --> Should better use <Dserver auto-save mode>\n\n")
-	    }
-	    _fname= sprintf("%s/%s%.4d%s", image_par(ccdunit, "file_dir"), \
-                                     image_par(ccdunit, "file_prefix"), \
-		    		                         image_par(ccdunit, "file_inum"), \
-                                     image_par(ccdunit, "file_suffix"))
-	    printf("Images saved in <%s> %s\n", _fname, (CCDSAVE_MODE[ccdunit]==4)?"(auto)":"")
-	  }
-  }
+  # -- open GUI
+  _limatake_display(ccds)
 
-  if (CCD_GUI[ccdunit]["on"])
-    ccd_display_start(ccdunit)
-
-  _limatake(ccdname, _expo, _nimg, _it_time, _rate)
+  # -- acquisition
+  _limatake(ccds, _expo, _nimg, _it_time, _rate)
 }'
 
-#%IU% (ccdname, expo, nimg, it_time, drate)
-def _limatake(ccdname, expo, nimg, it_time, drate) '{
-  local _ext_trig _it_back _clnup ccdunit
-
-  ccdunit= LIMA_DEV[ccdname]["unit"]
-
-  _ext_trig= image_par(ccdunit, "ext_trig")
-  _it_back= _limapar_get(ccdname, "latency_time")
-  _clnup= sprintf("_limatake_cleanup(\"%s\",%d,%g); ", ccdname, _ext_trig, _it_back)
-  cdef("cleanup_once", _clnup, "limatake")
-
-  image_par(ccdunit, "ext_trig", 0)
-  _limapar_set(ccdname, "latency_time", it_time)
-  _limaacq_start(ccdname, expo, nimg)
-
-  _limatake_wait(ccdname, drate)
-
-  cdef("cleanup_once", "", "limatake", "delete")
-  _limatake_cleanup(ccdname, _ext_trig, _it_back)
-}'
-
-#%IU% (ccdname, expo, nimg)
-def _limaacq_start(ccdname, expo, nimg) '{
-  local ccdunit
-  ccdunit= LIMA_DEV[ccdname]["unit"]
-  if (nimg > 1)
-    image_par(ccdunit, "images", nimg)
-  else
-    image_par(ccdunit, "images", 1)
-  image_par(ccdunit, "preset", expo)
-  image_par(ccdunit, "run")
-}'
-
-#%IU% (ccdname, etrig, it_time)
-def _limatake_cleanup(ccdname, etrig, it_time) '{
-  local ccdunit
-  ccdunit= LIMA_DEV[ccdname]["unit"]
-  image_par(ccdunit, "ext_trig", etrig)
-  image_par(ccdunit, "images", 1)
-  _limapar_set(ccdname, "latency_time", it_time)
-}'
-
-#%IU% (ccdname, rate)
-def _limatake_wait(ccdname, rate) '{
-  global LIMATAKE_IDX[]
-  local ccdunit
-  ccdunit= LIMA_DEV[ccdname]["unit"]
-  LIMATAKE_IDX["nacq"]= -1
-  LIMATAKE_IDX["nread"]= -1
-  LIMATAKE_IDX["ndisp"]= -1
-  LIMATAKE_IDX["disprate"]= rate
-  LIMATAKE_IDX["disptime"]= 0.
-  LIMATAKE_IDX["nsave"]= -1
-  LIMATAKE_IDX["autosave"]= ((CCDSAVE_MODE[ccdunit]==4)&&CCDSAVE[ccdunit])
-  while (wait(0x24)) {
-    sleep(COUNTERSPOLLTIME)
-    _limatake_wait_loop(ccdname)
-  }
-  _limatake_wait_loop(ccdname)
-  printf("\n")
-}'
-
-#%IU% (ccdname)
-def _limatake_wait_loop(ccdname) '{
-	LIMATAKE_IDX["nacq"]= _limapar_get(ccdname, "last_image_ready")
-	if (LIMATAKE_IDX["autosave"])
-		LIMATAKE_IDX["nsave"]= _limapar_get(ccdname, "last_image_saved")
-  if (LIMATAKE_IDX["nacq"]!=-1) {
-  	_limatake_wait_msg(ccdname)
-    if (LIMATAKE_IDX["nacq"]>LIMATAKE_IDX["nread"])
-    	_limatake_wait_read(ccdname, LIMATAKE_IDX["nread"]+1, LIMATAKE_IDX["nacq"])
-  }
-}'
-
-#%IU% (ccdname, from, to)
-def _limatake_wait_read(ccdname, from, to) '{
-  local fidx arrname dispdone ccdunit
-  ccdunit= LIMA_DEV[ccdname]["unit"]
-  arrname= sprintf("image_data%d", ccdunit)
-  for (fidx= from; fidx<=to; fidx++) {
-    image_par(ccdunit, "get_offset", fidx)
-	  LIMATAKE_IDX["nread"]= fidx
-
-	  if ((LIMATAKE_IDX["disprate"]>0.) && !dispdone) {
-	    tps= time()
-	    if (tps - LIMATAKE_IDX["disptime"] > LIMATAKE_IDX["disprate"]) {
-     		image_get(ccdunit, @arrname)
-			  LIMATAKE_IDX["ndisp"]= fidx
-			  LIMATAKE_IDX["disptime"]= tps
-			  _limatake_wait_msg(ccdname)
-			  dispdone= 1
-		  }
-	  }
-	  if (LIMATAKE_IDX["disprate"]==-1) {
-	    image_get(ccdunit, @arrname)
-	    LIMATAKE_IDX["ndisp"]= fidx
-	    _limatake_wait_msg(ccdname)
-	  }
-	  if (CCDSAVE[ccdunit]&&(!LIMATAKE_IDX["autosave"])) {
-      local __ccd_u
-      __ccd_u= ccdunit
-     	__ccdsave
-     	LIMATAKE_IDX["nsave"]= fidx
-     	_limatake_wait_msg(ccdname)
+#%IU%
+def _limatake_display(ccds) '{
+  #WARNING: use of ccd display macros !!
+  local iccd
+  for (iccd=0; iccd<ccds["nb"]; iccd++) {
+    ccdunit= LIMA_DEV[ccds[iccd]]["unit"]
+    if (CCD_GUI[ccdunit]["on"]) {
+      ccd_display_start(ccdunit)
     }
   }
 }'
 
-#%IU% (ccdname)
-def _limatake_wait_msg(ccdname) '{
-  _lima_trace ccdname
-  LIMATAKE_IDX["nacq"]= _limapar_get(ccdname, "last_image_ready")
-  if (LIMATAKE_IDX["nacq"]!=-1) {
-	  printf("Acquire #%d ", LIMATAKE_IDX["nacq"])
-  } else {
-    printf("Acquire DONE ")
+#%IU%
+def _limatake(ccds, _expo, _nimg, _it_time, _rate) '{
+  local iccd
+  global LIMATAKE[]
+
+  LIMATAKE["nb"]= ccds["nb"]
+
+  for (iccd=0; iccd<ccds["nb"]; iccd++) {
+    LIMATAKE[iccd]["ccdname"]= ccds[iccd]
+    LIMATAKE[iccd]["it_time"]= _limapar_get(ccds[iccd], "latency_time")
+    if (LIMATAKE[iccd]["it_time"] == _it_time) {
+      LIMATAKE[iccd]["it_time"]= -1
+    }
+    LIMATAKE[iccd]["trigger"]= _limapar_get(ccds[iccd], "acq_trigger_mode")
+    if (LIMATAKE[iccd]["trigger"] == "INTERNAL_TRIGGER") {
+      LIMATAKE[iccd]["trigger"]= -1
+    }
+    LIMATAKE[iccd]["savmode"]= _limaacq_checksaving(ccds[iccd])
+    LIMATAKE[iccd]["autosave"]= (LIMATAKE[iccd]["savmode"]!="MANUAL")
+    LIMATAKE[iccd]["autoheader"]= (LIMATAKE[iccd]["savmode"]=="AUTO_HEADER")
+    LIMATAKE[iccd]["nacq"]= -1
+    LIMATAKE[iccd]["nsave"]= -1
+    LIMATAKE[iccd]["nread"]= -1
+    LIMATAKE[iccd]["readtime"]= 0
   }
-  if (LIMATAKE_IDX["ndisp"]!=-1)
-    printf("Display #%d ", LIMATAKE_IDX["ndisp"])
-  if (LIMATAKE_IDX["nsave"]!=-1)
-    printf("Save #%d ", LIMATAKE_IDX["nsave"])
-  printf("\r")
+
+  cdef("cleanup_once", "_limatake_cleanup;", "limatake")
+
+  for (iccd=0; iccd<ccds["nb"]; iccd++) {
+    if (LIMATAKE[iccd]["trigger"] != -1)  {
+      _limapar_set(ccds[iccd], "acq_trigger_mode", "INTERNAL_TRIGGER")
+    }
+    if (LIMATAKE[iccd]["it_time"] != -1) {
+      _limapar_set(ccds[iccd], "latency_time", _it_time)
+    }
+    _limaacq_prepare(ccds[iccd], _expo, _nimg)
+  }
+
+  for (iccd=0; iccd<ccds["nb"]; iccd++) {
+    _limaacq_start(ccds[iccd])
+  }
+
+  _limatake_wait(_rate)
+
+  _limatake_cleanup
+  cdef("cleanup_once", "", "limatake", "delete")
 }'
 
+#%IU%
+def _limatake_cleanup '{
+  local iccd ccdname
+
+  for (iccd=0; iccd<LIMATAKE["nb"]; iccd++) {
+    ccdname= LIMATAKE[iccd]["ccdname"]
+    _limaacq_stop(ccdname)
+    if (LIMATAKE[iccd]["it_time"] != -1) {
+      _limapar_set(ccdname, "latency_time", LIMATAKE[iccd]["it_time"])
+    }
+    if (LIMATAKE[iccd]["trigger"] != -1) {
+      _limapar_set(ccdname, "acq_trigger_mode", LIMATAKE[iccd]["trigger"])
+    }
+  }
+}'
+
+#%IU% (ccdname, rate)
+def _limatake_wait(rate) '{
+  local iccd acqrunning
+
+  acqrunning= 1
+
+  _limatake_wait_update()
+  _limatake_wait_msg(1)
+
+  while (acqrunning) {
+    acqrunning= 0
+    for (iccd=0; iccd<LIMATAKE["nb"]; iccd++) {
+      acqrunning += _limaacq_running(LIMATAKE[iccd]["ccdname"])
+    }
+    if (acqrunning) {
+      _limatake_wait_update()
+      _limatake_wait_msg()
+      _limatake_wait_read(rate)
+      sleep(COUNTERSPOLLTIME)
+    }
+  }
+  _limatake_wait_update()
+  _limatake_wait_msg()
+  if (rate!=0) {
+    _limatake_readlast()
+  }
+
+  printf("\n")
+}'
+
+#%IU%
+#%MDESC%
+# Update last image number acquired/saved during a limatake acquisition
+#
+def _limatake_wait_update() '{
+  local iccd ccdname
+
+  for (iccd=0; iccd<LIMATAKE["nb"]; iccd++) {
+    ccdname= LIMATAKE[iccd]["ccdname"]
+    LIMATAKE[iccd]["lastacq"]= LIMATAKE[iccd]["nacq"]
+    LIMATAKE[iccd]["nacq"]= _limapar_get(ccdname, "last_image_ready")
+    if (LIMATAKE[iccd]["autosave"]) {
+      LIMATAKE[iccd]["nsave"]= _limapar_get(ccdname, "last_image_saved")
+    }
+  }
+}'
+
+#%IU%
+#%MDESC%
+# Read images if necessary during a limatake acquisition
+#
+def _limatake_wait_read(rate) '{
+  if (rate==-1) {
+    finished= 0
+    while (!finished) {
+      finished= 1
+      for (iccd=0; iccd<LIMATAKE["nb"]; iccd++) {
+        if (LIMATAKE[iccd]["nread"]!=LIMATAKE[iccd]["nacq"]) {
+          _limaacq_read(LIMATAKE[iccd]["ccdname"], LIMATAKE[iccd]["nread"]+1)
+          LIMATAKE[iccd]["nread"]= LIMATAKE[iccd]["nread"]+1
+        } 
+        if (LIMATAKE[iccd]["nread"]!=LIMATAKE[iccd]["nacq"]) {
+          finished= 0
+        }
+      }
+      _limatake_wait_update()
+      _limatake_wait_msg()
+    }
+  }
+  else if (rate>0.) {
+    for (iccd=0; iccd<LIMATAKE["nb"]; iccd++) {
+      if (LIMATAKE[iccd]["nacq"]>=0) {
+        tps= time()
+        if ((tps - LIMATAKE[iccd]["readtime"]) > rate) {
+          _limaacq_read(LIMATAKE[iccd]["ccdname"], LIMATAKE[iccd]["nacq"])
+          LIMATAKE[iccd]["nread"]= LIMATAKE[iccd]["nacq"]
+          LIMATAKE[iccd]["readtime"]= tps
+          _limatake_wait_update()
+          _limatake_wait_msg()
+        }
+      }
+    }
+  }
+}'
+
+def _limatake_readlast() '{
+  local iccd
+
+  for (iccd=0; iccd<LIMATAKE["nb"]; iccd++) {
+    if (LIMATAKE[iccd]["nacq"]>=0) {
+      _limaacq_read(LIMATAKE[iccd]["ccdname"], LIMATAKE[iccd]["nacq"])
+      LIMATAKE[iccd]["nread"]= LIMATAKE[iccd]["nacq"]
+      _limatake_wait_msg()
+    }
+  }
+}'
+
+#%IU%
+#%MDESC%
+# Print message during limtake acquisition
+#
+def _limatake_wait_msg(doclear) '{
+  local iccd cy msg
+
+  if (doclear) {
+    for (iccd= 0; iccd<LIMATAKE["nb"]; iccd++) print
+  }
+
+  for (iccd=0; iccd<LIMATAKE["nb"]; iccd++) {
+    msg= sprintf("\[md\]> %-8.8s\[me\] Acquire #%d ", LIMATAKE[iccd]["ccdname"], LIMATAKE[iccd]["nacq"])
+    if (LIMATAKE[iccd]["nread"]!=-1)
+      msg= msg sprintf("Display #%d ", LIMATAKE[iccd]["nread"])
+    if (LIMATAKE[iccd]["nsave"]!=-1)
+      msg= msg sprintf("Save #%d", LIMATAKE[iccd]["nsave"])
+    cy= -1*LIMATAKE["nb"] + iccd
+    tty_move(0, cy, msg)
+  }
+}' 
+
+#%IU% (ccdname, framenr)
+#%MDESC%
+# WORKAROUND: read image through taco device, waiting for a
+# tango interface which support DevEncoded
+#
+def _limaacq_read(ccdname, framenr) '{
+  local ccdunit arrname
+  ccdunit= LIMA_DEV[ccdname]["unit"]
+  arrname= LIMA_DEV[ccdname]["data"]
+  image_par(ccdunit, "get_offset", framenr)
+  image_get(ccdunit, @arrname)
+}'
+
+def _limaacq_prepare(ccdname, expo, nimg) '{
+  _limapar_set(ccdname, "acq_nb_frames", nimg)
+  _limapar_set(ccdname, "acq_expo_time", expo)
+  tango_io(LIMA_DEV[ccdname]["control"], "prepareAcq")
+  if (TANGO_ERR) {
+    _lima_tango_error ccdname LIMA_DEV[ccdname]["control"]
+  }
+  _limaacq_arrayinit(ccdname)
+}'
+
+def _limaacq_start(ccdname) '{
+  local cmd key
+  cmd= sprintf("_limaacq_stop(\"%s\"); ", ccdname)
+  key= sprintf("run_%s", ccdname)
+  cdef("cleanup_once", cmd, key)
+  tango_io(LIMA_DEV[ccdname]["control"], "startAcq")
+  if (TANGO_ERR) {
+    _lima_tango_error ccdname LIMA_DEV[ccdname]["control"]
+  }
+}'
+
+def _limaacq_stop(ccdname) '{
+  tango_io(LIMA_DEV[ccdname]["control"], "stopAcq")
+  cdef("cleanup_once", "", sprintf("run_%s", ccdname), "delete")
+  if (TANGO_ERR) {
+    _lima_tango_error ccdname LIMA_DEV[ccdname]["control"]
+  }
+}'
+
+def _limaacq_running(ccdname) '{
+  local acqstatus
+  acqstatus= _limapar_get(ccdname, "acq_status")
+  if (acqstatus == "Running") {
+    return 1
+  } else if (acqstatus == "Fault") {
+    _lima_error ccdname ; printf("Acquisiton in fault state\n")
+  }
+  return 0
+}'
+
+# --- versions of array init based on ccd.mac ---
+def _limaacq_arrayname(ccdname) '{
+  return sprintf("image_data%d", LIMA_DEV[ccdname]["unit"])
+}'
+
+def _limaacq_arrayinit(ccdname) '{
+  ccd_createarray LIMA_DEV[ccdname]["unit"]
+  LIMA_DEV[ccdname]["data"]= _limaacq_arrayname(ccdname)
+}'
+
+# --- versions of array init pure lima - not used for now ---
+#
+#def _limaacq_arrayname(ccdname) '{
+#  return sprintf("IMAGE_%s", ccdname)
+#}'
+#
+#def _limaacq_arrayinit(ccdname) '{
+#  local signed nbytes xdim ydim arrname
+#
+#  if (_limapar_get(ccdname, "image_sizes", -1)!=4) {
+#    _lima_error ccdname ; printf("Cannot get image size\n")
+#    return (-1)
+#  }
+#
+#  signed= LIMA_VALS[0]
+#  nbytes= LIMA_VALS[1]
+#  xdim= LIMA_VALS[2]
+#  ydim= LIMA_VALS[3]
+#
+#  arrname= _limaacq_arrayname(ccdname)
+#  if (nbytes == 1) {
+#    if (signed)
+#      shared byte array @arrname[xdim][ydim]
+#    else
+#      shared ubyte array @arrname[xdim][ydim]
+#  }
+#  else if (nbytes == 2) {
+#    if (signed)
+#      shared short array @arrname[xdim][ydim]
+#    else
+#      shared ushort array @arrname[xdim][ydim]
+#  } else if (nbytes == 4) {
+#    if (signed)
+#      shared long array @arrname[xdim][ydim]
+#    else
+#      shared ulong array @arrname[xdim][ydim]
+#  } else if (nbytes == 8) {
+#      shared double array @arrname[xdim][ydim]
+#  } else {
+#      _lima_error ccdname ; printf("Invalid data array type (%d,%d)\n", signed, nbytes)
+#  }
+#  array_op("tag", @arrname, "image")
+#  LIMA_DEV[ccdname]["data"]= arrname
+#}'
+#
+def _limaacq_checksaving(ccdname) '{
+  local savmode savfmt savdir savpre savsuf savnum
+
+  savmode= _limapar_get(ccdname, "saving_mode")
+  if (savmode != "MANUAL") {
+    savfmt= _limapar_get(ccdname, "saving_format")
+    savdir= _limapar_get(ccdname, "saving_directory")
+    savpre= _limapar_get(ccdname, "saving_prefix")
+    savsuf= _limapar_get(ccdname, "saving_suffix")
+    savnum= _limapar_get(ccdname, "saving_next_number")
+
+    _lima_trace ccdname
+    printf("Saving in %s/%s%04d%s [%s-%s]\n", savdir, savpre, savnum, savsuf, savmode, savfmt)
+  }
+  return savmode
+}'
 
 #%MACROS%
 #%IMACROS%

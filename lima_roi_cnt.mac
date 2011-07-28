@@ -69,7 +69,8 @@ def LimaRoiCnt_cmd(cntnum, key, p1, p2, unit ) '{
           if(device_status || LimaRoiController_PAR[unit]["dirty_flag"])
             {
               #Init all roi
-              local nb_roi i cmd[] cmdindex
+              local nb_roi i cmdindex
+	      local short array cmd[4]
               cmdindex = 0
               nb_roi = LimaRoiController_PAR[unit]["nbcounters"]
               for(i = 0; i < nb_roi;++i)
@@ -93,8 +94,10 @@ def LimaRoiCnt_cmd(cntnum, key, p1, p2, unit ) '{
           local roi_cnt_status arr_name
           arr_name = sprintf("LimaRoiCnt_%d_RESULT",unit)
           roi_cnt_status = tango_get(url,"CounterStatus")
-          while(roi_cnt_status > -2 && @arr_name[0] == 0) #Acquisition started
+          while((roi_cnt_status > -2) && (@arr_name[0] == 0)) {#Acquisition started
             tango_io(url,"readCounters",0,@arr_name)
+	    sleep(0.05)
+	  }
           tango_io(url,"Start")
         }
     }

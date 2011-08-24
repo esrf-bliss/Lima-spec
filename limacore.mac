@@ -499,17 +499,17 @@ def _limapar_controlinit(ccdname, version) '{
   _limapar_addtext(ccdname, "concat_nb_frames", "Concatenation number of frames")
 
   # --- accumulation mode
-	_limapar_addcontrol(ccdname, "acc_max_expotime", LP_RW, 1)
+	_limapar_addcontrol(ccdname, "acc_max_expo_time", LP_RW, 1)
   _limapar_addcontrol(ccdname, "acc_time_mode", LP_RW|LP_LIST, 1)
 	_limapar_addcontrol(ccdname, "acc_nb_frames", LP_READ|LP_CNT, 1)
-	_limapar_addcontrol(ccdname, "acc_expotime", LP_READ|LP_CNT, 1)
+	_limapar_addcontrol(ccdname, "acc_expo_time", LP_READ|LP_CNT, 1)
   _limapar_addcontrol(ccdname, "acc_live_time", LP_READ|LP_CNT, 1)
   _limapar_addcontrol(ccdname, "acc_dead_time", LP_READ|LP_CNT, 1)
 
-  _limapar_addtext(ccdname, "acc_max_expotime", "Accumulation Maximum exposure time/frame [sec]")
+  _limapar_addtext(ccdname, "acc_max_expo_time", "Accumulation Maximum exposure time/frame [sec]")
   _limapar_addtext(ccdname, "acc_nb_frames", "Accumulation number of frames")
   _limapar_addtext(ccdname, "acc_time_mode", "Accumulation time mode")
-  _limapar_addtext(ccdname, "acc_expotime", "Accumulation effective exposure time/frame [sec]")
+  _limapar_addtext(ccdname, "acc_expo_time", "Accumulation effective exposure time/frame [sec]")
   _limapar_addtext(ccdname, "acc_live_time", "Accumulation total live time [sec]")
   _limapar_addtext(ccdname, "acc_dead_time", "Accumulation total dead time [sec]")
 
@@ -938,7 +938,7 @@ def _limamenu_control(ccdname) '{
 
   items["acq_mode"]= ""
   items["latency_time"]= 0
-  items["acc_max_expotime"]= 0
+  items["acc_max_expo_time"]= 0
   items["shutter_mode"]= ""
   items["shutter_state"]= ""
   items["shutter_open_time"]= 0
@@ -955,7 +955,7 @@ def _limamenu_control(ccdname) '{
     tty_move(0, nl++, "(1) Acquisition :")
     _limamenu_printitem(ccdname, "acq_mode", items["acq_mode"], nl++, 11)
     _limamenu_printitem(ccdname, "latency_time", items["latency_time"], nl++, 12)
-    _limamenu_printitem(ccdname, "acc_max_expotime", items["acc_max_expotime"], nl++, 13)
+    _limamenu_printitem(ccdname, "acc_max_expo_time", items["acc_max_expo_time"], nl++, 13)
     nl++
     
     tty_move(0, nl++, "(2) Shutter :")
@@ -978,7 +978,7 @@ def _limamenu_control(ccdname) '{
     if ((option==1)||(option==12))
       _limapar_ask(ccdname, "latency_time", items["latency_time"])
     if ((option==1)||(option==13))
-      _limapar_ask(ccdname, "acc_max_expotime", items["acc_max_expotime"])
+      _limapar_ask(ccdname, "acc_max_expo_time", items["acc_max_expo_time"])
 
     if ((option==2)||(option==21)) 
       _limapar_ask(ccdname, "shutter_mode", items["shutter_mode"])

@@ -32,23 +32,26 @@ def _limaroi_init() '{
 	cdef("user_getcounts", "_limaroi_getcounts\n", "limaroi", 0x20)
 }'
 
+def user_limaroi_add '#$*'
+def user_limaroi_remove '#$*'
+
 #%UU% <ccdname> <roimne> <xbeg> <xend> <ybeg> <yend> 
 #%MDESC% 
 # Add or Modify a ROI
 #
 def limaroiadd '{
-  if ($#!=6) {
-    print "Usage: $0 <ccdname> <roimne> <xbeg> <xend> <ybeg> <yend>"
+  if ($#!=7) {
+    print "Usage: $0 <ccdname> <roimne> <roitype> <xbeg> <xend> <ybeg> <yend>"
     exit
   }
-	_limaroi_add("$1", "$2", $3, $4, $5, $6)
+	_limaroi_add("$1", "$2", $3, $4, $5, $6, $7)
 }'
 
 #%IU% (ccdname, mne, xmin, xmax, ymin, ymax)
 #%MDESC% 
 # Add or Modify a ROI
 #
-def _limaroi_add(ccdname, roimne, xmin, xmax, ymin, ymax) '{
+def _limaroi_add(ccdname, roimne, roitype, xmin, xmax, ymin, ymax) '{
 
   _limaroi_init()
    
@@ -56,10 +59,14 @@ def _limaroi_add(ccdname, roimne, xmin, xmax, ymin, ymax) '{
 		list_add(LIMA_ROI, roimne)
 
 	LIMA_ROI[roimne]["ccdname"]= ccdname
+  LIMA_ROI[roimne]["type"]= roitype
 	LIMA_ROI[roimne]["xmin"]= xmin
 	LIMA_ROI[roimne]["xmax"]= xmax
 	LIMA_ROI[roimne]["ymin"]= ymin
 	LIMA_ROI[roimne]["ymax"]= ymax
+
+  _limaroi_server_update(ccdname)
+  user_limaroi_add ccdname roimne
 }'
 
 #%UU% <roimne>
@@ -87,12 +94,16 @@ def limaroiremove '{
 #  Remove the specified ROI
 #
 def _limaroi_remove(roimne) '{
-  local roinum
+  local roinum ccdname
+
+  ccdname= LIMA_ROI[roimne]["ccdname"]
 
   list_remove(LIMA_ROI, roimne)
   if ((roinum= cnt_num(roimne))!=-1) {
     S[roinum]= 0
   }
+  _limaroi_server_update(ccdname)
+  user_limaroi_remove ccdname roimne
   if (list_n(LIMA_ROI)<1) {
     cdef("", "", "limaroi", "delete")
   }
@@ -124,7 +135,7 @@ def limaroireset '{
 #%BR% If <ccdname> == %B%*%B%, remove all ROIs for all CCDs
 #
 def _limaroi_reset(ccdname) '{
-  local iroi roimne roinum 
+  local iroi roimne roinum roiccd
   local delroi[] nroi
 
   if (ccdname=="*") {
@@ -133,6 +144,12 @@ def _limaroi_reset(ccdname) '{
       if ((roinum=cnt_num(roimne)) != -1) {
         S[roinum]= 0
       }
+      roiccd= LIMA_ROI[roimne]["ccdname"]
+      if (roiccd!=ccdname) {
+        ccdname= roiccd
+        _limaroi_server_update(ccdname)
+      }
+      user_limaroi_remove roiccd roimne
     }
     list_init LIMA_ROI
   } else {
@@ -146,8 +163,13 @@ def _limaroi_reset(ccdname) '{
         }
       }
     }
-    for (iroi=0; iroi<nroi; iroi++)
+    for (iroi=0; iroi<nroi; iroi++) {
       list_remove(LIMA_ROI, delroi[iroi])
+      user_limaroi_remove ccdname delroi[iroi]
+    }
+    if (nroi) {
+      _limaroi_server_update(ccdname)
+    }
   }
   if (list_n(LIMA_ROI)<1) {
     cdef("", "", "limaroi", "delete")
@@ -178,9 +200,9 @@ def limaroirename '{
 # Rename the ROI <old_mne> to <new_mne> keeping same ROI parameters
 #
 def _limaroi_rename(oldmne, newmne) '{
-	_limaroi_add(LIMA_ROI[oldmne]["ccdname"], newmne, \
+	_limaroi_add(LIMA_ROI[oldmne]["ccdname"], newmne, LIMA_ROI[oldmne]["type"], \
                LIMA_ROI[oldmne]["xmin"], LIMA_ROI[oldmne]["xmax"], \
-	       LIMA_ROI[oldmne]["ymin"], LIMA_ROI[oldmne]["ymax"])
+	             LIMA_ROI[oldmne]["ymin"], LIMA_ROI[oldmne]["ymax"])
 	_limaroi_remove(oldmne)
 }'
 
@@ -191,6 +213,7 @@ def _limaroi_getcounts '{
 	local iroi roimne roinum
   local ccdname ccdunit arrname
 	local xi xa yi ya
+  local val npix
 
   for (iroi= 1; iroi<=list_n(LIMA_ROI); iroi++) {
     roimne= list_item(LIMA_ROI, iroi)
@@ -199,11 +222,21 @@ def _limaroi_getcounts '{
     ccdunit= LIMA_DEV[ccdname]["unit"]
     if ((CCD_ON[ccdunit])&&(roinum!=-1)&&(counter_par(roinum, "disable")!=1)) {
       arrname= sprintf("image_data%d", ccdunit)
+      roitype= LIMA_ROI[roimne]["type"] 
       xi= LIMA_ROI[roimne]["xmin"]
       xa= LIMA_ROI[roimne]["xmax"]
       yi= LIMA_ROI[roimne]["ymin"]
       ya= LIMA_ROI[roimne]["ymax"]
-      S[roinum]= array_op("sum", @arrname[yi:ya][xi:xa])
+      val= array_op("sum", @arrname[yi:ya][xi:xa])
+      if (roitype>0) {
+          npix= array_op("rows", @arrname)*array_op("cols", @arrname)
+          if (npix!=0) val= val / npix
+      }
+      if (roitype==2) {
+          val= array_op("sumsq", @arrname - val)
+          if (npix!=0) val= val / npix
+      }
+      S[roinum]= val
     }
   }
 }'
@@ -244,7 +277,7 @@ def limaroi '{
 #
 def _limaroi_menu(ccdname)'{
   local nb key
-  local cmne xmin xmax ymin ymax
+  local cmne roitype xmin xmax ymin ymax
   local ccdunit arrname
 	local file
 
@@ -275,21 +308,23 @@ def _limaroi_menu(ccdname)'{
 			if (cmne) {
 				xmax= array_op("cols", @arrname)-1
 				ymax= array_op("rows", @arrname)-1
+        roitype= getval(" > Roi type [0=SUM, 1=AVG, 2=STD]", 0)
 				xmin= getval(" > X min  ", 0)
 				xmax= getval(" > X max  ", xmax)
 				ymin= getval(" > Y min  ", 0)
 				ymax= getval(" > Y max  ", ymax)
-				_limaroi_add(ccdname, cmne, xmin, xmax, ymin, ymax)
+				_limaroi_add(ccdname, cmne, roitype, xmin, xmax, ymin, ymax)
 			}
 		}
 		else if (key=="m"||key=="M") {
 			cmne= getval(" > Counter mnemonic       ", 0)
 			if (list_check(LIMA_ROI, cmne)>0) {
+        roitype= getval(" > Roi type [0=SUM, 1=AVG, 2=STD]", LIMA_ROI[cmne]["type"])
 				xmin= getval(" > X min          ", LIMA_ROI[cmne]["xmin"])
 				xmax= getval(" > X max          ", LIMA_ROI[cmne]["xmax"])
 				ymin= getval(" > Y min          ", LIMA_ROI[cmne]["ymin"])
 				ymax= getval(" > Y max          ", LIMA_ROI[cmne]["ymax"])
-				_limaroi_add(ccdname, cmne, xmin, xmax, ymin, ymax)
+				_limaroi_add(ccdname, cmne, roitype, xmin, xmax, ymin, ymax)
 			}
 		}
 		else if (key=="s"||key=="S") {
@@ -319,25 +354,31 @@ def _limaroi_menu(ccdname)'{
 #
 def _limaroi_show(ccdname) '{
   local iroi nb roimne
-	local cmne xmin xmax ymin ymax status
+	local cmne roitype xmin xmax ymin ymax status
 
   _limaroi_init()
 
 	clscreen()
 	tty_move(10,0,sprintf("\[md\]< LIMA ROI on %s >\[me\]", ccdname))
-	tty_move(0,2,"           Counter     Xmin   Xmax   Ymin   Ymax.")
+	tty_move(0,2,"           Counter Type    Xmin   Xmax   Ymin   Ymax.")
     
 	nb= 3
 	for (iroi=1; iroi<=list_n(LIMA_ROI); iroi++) {
 		roimne= list_item(LIMA_ROI, iroi)
     if (LIMA_ROI[roimne]["ccdname"]==ccdname) {
+      roitype= "SUM"
+      if (LIMA_ROI[roimne]["type"]==1) {
+         roitype= "AVG"
+      } else if (LIMA_ROI[roimne]["type"]==2) {
+         roitype= "STD"
+      }
 		  xmin= LIMA_ROI[roimne]["xmin"]
 		  xmax= LIMA_ROI[roimne]["xmax"]
 		  ymin= LIMA_ROI[roimne]["ymin"]
 		  ymax= LIMA_ROI[roimne]["ymax"]
       status = (cnt_num(roimne)==-1)?"    Not in config !!!":""
-		  tty_move(0, nb++, sprintf("\[md\]%18s   %6s %6s %6s %6s\[me\] %s", \
-				                roimne, xmin, xmax, ymin, ymax, status))
+		  tty_move(0, nb++, sprintf("\[md\]%18s  %3s  %6d %6d %6d %6d\[me\] %s", \
+				                roimne, roitype, xmin, xmax, ymin, ymax, status))
     }
 	}
 	tty_move(0,nb++,"--------------------------------------------------------")
@@ -391,9 +432,11 @@ def _limaroi_save(ccdname, filename) '{
     printf("# name xmin xmax ymin ymax\n")
     for (iroi=1; iroi<=list_n(LIMA_ROI); iroi++) {
       roimne= list_item(LIMA_ROI, iroi)
-      printf("%s %d %d %d %d \n", roimne, LIMA_ROI[roimne]["xmin"], \
-            LIMA_ROI[roimne]["xmax"], LIMA_ROI[roimne]["ymin"], \
-            LIMA_ROI[roimne]["ymax"])
+      if (LIMA_ROI[roimne]["ccdname"]==ccdname) {
+        printf("%s %d %d %d %d %d \n", roimne, LIMA_ROI[roimne]["type"], \
+              LIMA_ROI[roimne]["xmin"], LIMA_ROI[roimne]["xmax"], \
+              LIMA_ROI[roimne]["ymin"], LIMA_ROI[roimne]["ymax"])
+      }
     }
     ont; close(file)
     _lima_trace ccdname ; printf("Saved ROIs to <%s>\n", file)
@@ -430,7 +473,7 @@ def limaroiload '{
 # 
 def _limaroi_load(ccdname, filename) '{
   local file nroi line
-  local roimne xmin xmax ymin ymax
+  local roimne roitype xmin xmax ymin ymax
 
   if (!filename) {
     file= sprintf("%s/local/spec/userconf/limaroi_%s.def.%s", BLISSADM, ccdname, USER)
@@ -446,8 +489,8 @@ def _limaroi_load(ccdname, filename) '{
     for (line= getline(file); line!=-1; line=getline(file)) {
       if (substr(line, 0, 1)=="#")
         continue
-      if (sscanf(line, "%s %d %d %d %d", roimne, xmin, xmax, ymin, ymax)==5) {
-        _limaroi_add(ccdname, roimne, xmin, xmax, ymin, ymax)
+      if (sscanf(line, "%s %d %d %d %d %d", roimne, roitype, xmin, xmax, ymin, ymax)==6) {
+        _limaroi_add(ccdname, roimne, roitype, xmin, xmax, ymin, ymax)
         nroi++
       } else {
         _lima_error ccdname ; printf("Wrong parameters on line <%s>\n", line)
@@ -457,7 +500,156 @@ def _limaroi_load(ccdname, filename) '{
     _lima_trace ccdname ; printf("%d ROIs loaded from <%s>\n", nroi, file)
   }
 }'
-  
+
+# -----------------------------------------------------------------------------
+
+def limaroiserver '{
+  global LIMA_ROI_SRV[]
+  local ccdname roisrv
+
+  if (list_n(LIMA_ROI_SRV)<0)
+    list_init LIMA_ROI_SRV
+
+  if ($# != 2) {
+    print "Usage: $0 <ccdname> <roicounter_device>"
+    exit
+  }
+
+  ccdname= "$1"
+  roisrv= "$2"
+
+  if (list_check(LIMA_DEV, ccdname)<=0) {
+    _lima_error ; printf("Unknown LIMA CCD <%s>\n", ccdname)
+  } else {
+    list_add(LIMA_ROI_SRV, ccdname)
+    LIMA_ROI_SRV[ccdname]["device"]= roisrv
+    LIMA_ROI_SRV[ccdname]["nroi"]= 0
+    _limaroi_server_send(ccdname)
+  }
+}'
+
+def _limaroi_server_update(ccdname) '{
+  if (_limaroi_server_defined(ccdname))
+    _limaroi_server_send(ccdname)
+}'
+
+def _limaroi_server_defined(ccdname) '{
+  if (list_getpar(LIMA_ROI_SRV, ccdname, "device")!=-1)
+    return (1)
+  else
+    return (0)
+}'
+
+def _limaroi_server_send(ccdname) '{
+  local nroi iroi roimne sendroi[]
+  local xmin xmax ymin ymax
+  local state srv
+
+  srv= list_getpar(LIMA_ROI_SRV, ccdname, "device")
+  if (srv==-1)
+    return (-1)
+
+  nroi= 0
+  for (iroi=1; iroi<=list_n(LIMA_ROI); iroi++) {
+    roimne= list_item(LIMA_ROI, iroi)
+    if (LIMA_ROI[roimne]["ccdname"]==ccdname) {
+      sendroi[nroi++]= roimne
+    }
+  }
+
+  if (nroi) {
+    local long array argroi[4*nroi]
+
+    for (iroi=0; iroi<nroi; iroi++) {
+      roimne= sendroi[iroi]
+
+		  xmin= LIMA_ROI[roimne]["xmin"]
+		  xmax= LIMA_ROI[roimne]["xmax"]
+		  ymin= LIMA_ROI[roimne]["ymin"]
+		  ymax= LIMA_ROI[roimne]["ymax"]
+
+      argroi[4*iroi + 0]= (xmax>xmin) ? xmin : xmax
+      argroi[4*iroi + 1]= (ymax>ymin) ? ymin : ymax
+      argroi[4*iroi + 2]= fabs(xmax-xmin)+1
+      argroi[4*iroi + 3]= fabs(ymax-ymin)+1
+
+      LIMA_ROI_SRV[ccdname][iroi]= roimne
+    }
+    LIMA_ROI_SRV[ccdname]["nroi"]= nroi
+
+    state= tango_get(srv, "State")
+    if (state!=0) {
+      tango_io(srv, "Start")
+    }
+    tango_io(srv, "set", argroi)
+  }
+
+  return (nroi)
+}'
+
+def _limaroi_server_reset(ccdname) '{
+  local srv
+  srv= list_item(LIMA_ROI_SRV, ccdname, "device")
+  if (srv!=-1) {
+    tango_io(srv, "Stop")
+    LIMA_ROI_SRV[ccdname]["nroi"]= 0
+  }
+}'
+
+def _limaroi_server_initarr(ccdname, maxpt) '{
+  local iroi roiarr nroi
+
+  nroi= LIMA_ROI_SRV[ccdname]["nroi"]
+  if (nroi) {
+    for (iroi=0; iroi<nroi; iroi++) {
+      roiarr= sprintf("ROICNT_%s_%s", ccdname, LIMA_ROI_SRV[ccdname][iroi])
+      double array @roiarr[maxpt][3]
+      @roiarr[:][:]= 0.
+    }
+    roiarr= sprintf("ROICNT_READ_%s", ccdname)
+    double array @roiarr[1+(nroi*4*maxpt)]
+  }
+  return (nroi)
+}'
+
+def _limaroi_server_read(ccdname, frompt) '{
+  local nroi rois[] iroi 
+  local readarr roiarr offset
+  local iframe nframe lastpt lastrd
+  local srv
+
+  srv= list_getpar(LIMA_ROI_SRV, ccdname, "device")
+  if (srv==-1)
+    return (-1)
+
+  nroi= LIMA_ROI_SRV[ccdname]["nroi"]
+  if (nroi) {
+    lastpt= tango_get(srv, "CounterStatus")
+    if (lastpt > frompt) {
+      readarr= sprintf("ROICNT_READ_%s", ccdname)
+      tango_io(srv, "readCounters", (frompt==-1?0:frompt), @readarr)
+
+      nframe= @readarr[0]
+      offset= 1
+      if (nframe) {
+        for (iroi= 0; iroi<nroi; iroi++) {
+          roiarr= sprintf("ROICNT_%s_%s", ccdname, LIMA_ROI_SRV[ccdname][iroi])
+          for (iframe=0; iframe<nframe; iframe++) {
+            @roiarr[int(@readarr[offset])][0:2]= @readarr[offset+1:offset+3]
+            offset+=4
+          }
+        }
+      }
+    }
+    lastrd= frompt + nframe - 1
+    lastrd= (lastrd > 0) ? lastrd : 0
+    return (lastrd)
+  } else {
+    return (0)
+  }
+}'
+
+
 #%MACROS%
 #%IMACROS%
 #%TOC%

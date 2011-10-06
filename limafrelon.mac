@@ -85,15 +85,15 @@ def limafrelonmenu(ccdname) '{
     option= getval("\n\n\tOption ---> ", 0)
     printf("\n\n")
 
-    if((option=2) || (option=21))
+    if((option==2) || (option==21))
       _limapar_ask(ccdname, "image_mode",items["image_mode"])
-    if((option=2) || (option=22))
+    if((option==2) || (option==22))
       _limapar_ask(ccdname, "input_channel",items["input_channel"])
-    if((option=2) || (option=23))
+    if((option==2) || (option==23))
       _limapar_ask(ccdname, "roi_mode",items["roi_mode"])
-    if((option=2) || (option=24))
+    if((option==2) || (option==24))
       _limapar_ask(ccdname, "roi_bin_offset",items["roi_bin_offset"])
-    if((option=2) || (option=25))
+    if((option==2) || (option==25))
       _limapar_ask(ccdname, "e2v_correction",items["e2v_correction"])
   }
 }'

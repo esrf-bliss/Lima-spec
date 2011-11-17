@@ -19,6 +19,7 @@ def limafrelonsetup(ccdname) '{
   _limapar_addconfig(ccdname, "roi_mode",LP_RW|LP_LIST,1)
   _limapar_addconfig(ccdname, "roi_bin_offset",LP_RW,1,"long")
   _limapar_addconfig(ccdname, "e2v_correction",LP_RW|LP_LIST,1)
+  _limapar_addconfig(ccdname, "config_hd",LP_RW|LP_LIST,1)
 
   # --- callback macro on parameter set
   #_limapar_addconfig_cb(ccdname, "_limafrelon_setpar")

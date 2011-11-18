@@ -90,7 +90,13 @@ def limafrelonmenu(ccdname) '{
     printf("\n\n")
 
     if((option==2) || (option==21))
-      _limapar_ask(ccdname, "image_mode",items["image_mode"])
+      {
+        local unit
+        _limapar_ask(ccdname, "image_mode",items["image_mode"])
+        unit  = LIMA_DEV[ccdname]["unit"]
+        image_par(unit, "resize")
+      }
+
     if((option==2) || (option==22))
       _limapar_ask(ccdname, "input_channel",items["input_channel"])
     if((option==2) || (option==23))

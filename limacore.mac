@@ -499,12 +499,14 @@ def _limapar_controlinit(ccdname, version) '{
   _limapar_addtext(ccdname, "concat_nb_frames", "Concatenation number of frames")
 
   # --- accumulation mode
-	_limapar_addcontrol(ccdname, "acc_max_expo_time", LP_RW, 1)
+  _limapar_addcontrol(ccdname, "acc_max_expo_time", LP_RW, 1)
   _limapar_addcontrol(ccdname, "acc_time_mode", LP_RW|LP_LIST, 1)
-	_limapar_addcontrol(ccdname, "acc_nb_frames", LP_READ|LP_CNT, 1)
-	_limapar_addcontrol(ccdname, "acc_expo_time", LP_READ|LP_CNT, 1)
+  _limapar_addcontrol(ccdname, "acc_nb_frames", LP_READ|LP_CNT, 1)
+  _limapar_addcontrol(ccdname, "acc_expo_time", LP_READ|LP_CNT, 1)
   _limapar_addcontrol(ccdname, "acc_live_time", LP_READ|LP_CNT, 1)
   _limapar_addcontrol(ccdname, "acc_dead_time", LP_READ|LP_CNT, 1)
+  _limapar_addcontrol(ccdname, "acc_saturated_active", LP_RW, 1)
+  _limapar_addcontrol(ccdname, "acc_saturated_threshold", LP_RW|LP_MOT, 1)
 
   _limapar_addtext(ccdname, "acc_max_expo_time", "Accumulation Maximum exposure time/frame [sec]")
   _limapar_addtext(ccdname, "acc_nb_frames", "Accumulation number of frames")
@@ -512,6 +514,8 @@ def _limapar_controlinit(ccdname, version) '{
   _limapar_addtext(ccdname, "acc_expo_time", "Accumulation effective exposure time/frame [sec]")
   _limapar_addtext(ccdname, "acc_live_time", "Accumulation total live time [sec]")
   _limapar_addtext(ccdname, "acc_dead_time", "Accumulation total dead time [sec]")
+  _limapar_addtext(ccdname, "acc_saturated_active", "Activate accumulation saturation detection")
+  _limapar_addtext(ccdname, "acc_saturated_threshold", "Accumulation saturation detection threshold")
 
   # --- image
   _limapar_addcontrol(ccdname, "image_type", LP_READ, 1)

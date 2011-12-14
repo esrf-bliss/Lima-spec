@@ -19,6 +19,7 @@ def limafrelonsetup(ccdname) '{
   _limapar_addconfig(ccdname, "roi_mode",LP_RW|LP_LIST,1)
   _limapar_addconfig(ccdname, "roi_bin_offset",LP_RW,1,"long")
   _limapar_addconfig(ccdname, "e2v_correction",LP_RW|LP_LIST,1)
+  _limapar_addconfig(ccdname, "config_hd",LP_RW|LP_LIST,1)
 
   # --- callback macro on parameter set
   #_limapar_addconfig_cb(ccdname, "_limafrelon_setpar")
@@ -30,6 +31,7 @@ def limafrelonsetup(ccdname) '{
   _limapar_addtext(channel, "roi_mode","Roi mode")
   _limapar_addtext(channel, "roi_bin_offset","Roi bin offset")
   _limapar_addtext(channel, "e2v_correction","Correction E2V")
+  _limapar_addtext(channel, "config_hd","Read mode")
 }'
 
 lima_addlimatype("Frelon", "limafrelonsetup", "limafrelonmenu")
@@ -60,6 +62,7 @@ def limafrelonmenu(ccdname) '{
   items["roi_bin_offset"] = -1
   items["e2v_correction"] = "OFF"
   items["input_channel"] = "1-2-3-4"
+  items["config_hd"] = "PRECISION"
   option= 1
 
   while (option) {
@@ -80,20 +83,27 @@ def limafrelonmenu(ccdname) '{
     _limamenu_printitem(ccdname, "roi_mode",items["roi_mode"], nl++,23)
     _limamenu_printitem(ccdname, "roi_bin_offset",items["roi_bin_offset"],nl++,24)
     _limamenu_printitem(ccdname, "e2v_correction",items["e2v_correction"],nl++,25)
+    _limamenu_printitem(ccdname, "config_hd",items["config_hd"],nl++,25)
     nl++
 
     option= getval("\n\n\tOption ---> ", 0)
     printf("\n\n")
 
-    if((option=2) || (option=21))
-      _limapar_ask(ccdname, "image_mode",items["image_mode"])
-    if((option=2) || (option=22))
+    if((option==2) || (option==21))
+      {
+        local unit
+        _limapar_ask(ccdname, "image_mode",items["image_mode"])
+        unit  = LIMA_DEV[ccdname]["unit"]
+        image_par(unit, "resize")
+      }
+
+    if((option==2) || (option==22))
       _limapar_ask(ccdname, "input_channel",items["input_channel"])
-    if((option=2) || (option=23))
+    if((option==2) || (option==23))
       _limapar_ask(ccdname, "roi_mode",items["roi_mode"])
-    if((option=2) || (option=24))
+    if((option==2) || (option==24))
       _limapar_ask(ccdname, "roi_bin_offset",items["roi_bin_offset"])
-    if((option=2) || (option=25))
+    if((option==2) || (option==25))
       _limapar_ask(ccdname, "e2v_correction",items["e2v_correction"])
   }
 }'

@@ -277,21 +277,22 @@ def _limatake_wait_msg(doclear) '{
 # WORKAROUND: read image through taco device, waiting for a
 # tango interface which support DevEncoded
 #
-#def _limaacq_read(ccdname, framenr) '{
-#  local ccdunit arrname
-#  ccdunit= LIMA_DEV[ccdname]["unit"]
-#  arrname= LIMA_DEV[ccdname]["data"]
-#  image_par(ccdunit, "get_offset", framenr)
-#  image_get(ccdunit, @arrname)
-#}'
-
-# The under-test image reading using DevEncoded format
 def _limaacq_read(ccdname, framenr) '{
   local ccdunit arrname
   ccdunit= LIMA_DEV[ccdname]["unit"]
   arrname= LIMA_DEV[ccdname]["data"]
-  tango_io(LIMA_DEV[ccdname]["control"],"readImage",framenr, @arrname)
+  image_par(ccdunit, "get_offset", framenr)
+  image_get(ccdunit, @arrname)
 }'
+
+# PURE_LIMA
+# The under-test image reading using DevEncoded format
+# def _limaacq_read(ccdname, framenr) '{
+#   local ccdunit arrname
+#   ccdunit= LIMA_DEV[ccdname]["unit"]
+#   arrname= LIMA_DEV[ccdname]["data"]
+#   tango_io(LIMA_DEV[ccdname]["control"],"readImage",framenr, @arrname)
+# }'
 
 def _limaacq_prepare(ccdname, expo, nimg) '{
   _limapar_set(ccdname, "acq_nb_frames", nimg)
@@ -334,59 +335,60 @@ def _limaacq_running(ccdname) '{
 }'
 
 # --- versions of array init based on ccd.mac ---
-#def _limaacq_arrayname(ccdname) '{
-#  return sprintf("image_data%d", LIMA_DEV[ccdname]["unit"])
-#}'
-
-#def _limaacq_arrayinit(ccdname) '{
-#  ccd_createarray LIMA_DEV[ccdname]["unit"]
-#  LIMA_DEV[ccdname]["data"]= _limaacq_arrayname(ccdname)
-#}'
-
-# --- versions of array init pure lima - not used for now ---
-
 def _limaacq_arrayname(ccdname) '{
-  return sprintf("IMAGE_%s", ccdname)
+  return sprintf("image_data%d", LIMA_DEV[ccdname]["unit"])
 }'
 
 def _limaacq_arrayinit(ccdname) '{
-  local signed nbytes xdim ydim arrname
-
-  if (_limapar_get(ccdname, "image_sizes", -1)!=4) {
-    _lima_error ccdname ; printf("Cannot get image size\n")
-    return (-1)
-  }
-
-  signed= LIMA_VALS[0]
-  nbytes= LIMA_VALS[1]
-  xdim= LIMA_VALS[2]
-  ydim= LIMA_VALS[3]
-
-  arrname= _limaacq_arrayname(ccdname)
-  if (nbytes == 1) {
-    if (signed)
-      shared byte array @arrname[xdim][ydim]
-    else
-      shared ubyte array @arrname[xdim][ydim]
-  }
-  else if (nbytes == 2) {
-    if (signed)
-      shared short array @arrname[xdim][ydim]
-    else
-      shared ushort array @arrname[xdim][ydim]
-  } else if (nbytes == 4) {
-    if (signed)
-      shared long array @arrname[xdim][ydim]
-    else
-      shared ulong array @arrname[xdim][ydim]
-  } else if (nbytes == 8) {
-      shared double array @arrname[xdim][ydim]
-  } else {
-      _lima_error ccdname ; printf("Invalid data array type (%d,%d)\n", signed, nbytes)
-  }
-  array_op("tag", @arrname, "image")
-  LIMA_DEV[ccdname]["data"]= arrname
+  ccd_createarray LIMA_DEV[ccdname]["unit"]
+  LIMA_DEV[ccdname]["data"]= _limaacq_arrayname(ccdname)
 }'
+
+# --- versions of array init pure lima - not used for now ---
+# PURE_LIMA
+# def _limaacq_arrayname(ccdname) '{
+#   return sprintf("IMAGE_%s", ccdname)
+# }'
+
+# def _limaacq_arrayinit(ccdname) '{
+#   local signed nbytes xdim ydim arrname
+
+#   if (_limapar_get(ccdname, "image_sizes", -1)!=4) {
+#     _lima_error ccdname ; printf("Cannot get image size\n")
+#     return (-1)
+#   }
+
+#  signed= LIMA_VALS[0]
+#  nbytes= LIMA_VALS[1]
+#  xdim= LIMA_VALS[2]
+#  ydim= LIMA_VALS[3]
+
+#  arrname= _limaacq_arrayname(ccdname)
+#  if (nbytes == 1) {
+#    if (signed)
+#      shared byte array @arrname[xdim][ydim]
+#    else
+#      shared ubyte array @arrname[xdim][ydim]
+#  }
+#  else if (nbytes == 2) {
+#    if (signed)
+#      shared short array @arrname[xdim][ydim]
+#    else
+#      shared ushort array @arrname[xdim][ydim]
+#  } else if (nbytes == 4) {
+#    if (signed)
+#      shared long array @arrname[xdim][ydim]
+#    else
+#      shared ulong array @arrname[xdim][ydim]
+#  } else if (nbytes == 8) {
+#      shared double array @arrname[xdim][ydim]
+#  } else {
+#      _lima_error ccdname ; printf("Invalid data array type (%d,%d)\n", signed, nbytes)
+#  }
+#  array_op("tag", @arrname, "image")
+#  LIMA_DEV[ccdname]["data"]= arrname
+#}'
+
 
 def _limaacq_checksaving(ccdname) '{
   local savmode savfmt savdir savpre savsuf savnum

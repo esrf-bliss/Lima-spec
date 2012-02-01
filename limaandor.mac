@@ -1,0 +1,89 @@
+#%NAME% 
+#  Specific macros for Lima Andor detector 
+#%CATEGORY% Detection, Ccd
+
+#%LOG%
+#
+#$Revision: $
+#
+
+def limaandorsetup(ccdname) '{
+
+  # --- common control init
+  _limapar_controlinit(ccdname, 0)
+
+  # --- parameter definition
+
+  _limapar_addconfig(ccdname, "cooling_status",LP_READ,1)
+  _limapar_addconfig(ccdname, "cooler",LP_RW|LP_LIST,1)
+  _limapar_addconfig(ccdname, "temperature", LP_RW|LP_MOT, 1)
+
+  _limapar_addconfig(ccdname, "fast_trigger",LP_RW|LP_LIST,1)
+  _limapar_addconfig(ccdname, "shutter_level",LP_RW|LP_LIST,1)
+  
+  
+
+  # --- parameter description
+  _limapar_addtext(ccdname, "cooler", "Cooler")
+  _limapar_addtext(ccdname, "cooling_status", "Cooling Status")
+  _limapar_addtext(ccdname, "temperature", "Sensor Temperature")  
+  _limapar_addtext(ccdname, "fast_trigger", "Fast Trigger Mode")  
+  _limapar_addtext(ccdname, "shutter_level", "Shutter Level Mode")
+
+
+}'
+
+lima_addlimatype("Andor", "limaandorsetup", "limaandormenu")
+
+
+def limaandormenu(ccdname) '{
+  local items[] parname
+  local nl option
+  
+  items["cooling_status"] = ""
+  items["cooler"] = ""
+  items["temperature"] = -1
+  items["fast_trigger"] = ""
+  items["shutter_level"] = ""
+  
+  option= 1
+  
+  while (option) {
+    
+    for (parname in items) {
+      items[parname]= _limapar_get(ccdname, parname)
+    }
+    
+    nl = _limamenu_printtitle(ccdname, "Configuration", "config")
+    
+    tty_move(0, nl, "(1) Temperature Control :")
+    tty_move(25, nl++, sprintf(" <\[md\]%s\[me\]>", items["cooling_status"]))
+    tty_move(5,nl++, sprintf("(r) %s", "Refresh status"))
+    _limamenu_printitem(ccdname, "cooler", items["cooler"], nl++,12)
+    _limamenu_printitem(ccdname, "temperature", items["temperature"], nl++,13)
+    nl++
+    tty_move(0, nl++, "(2) Input/Output Signals :")
+    _limamenu_printitem(ccdname, "fast_trigger", items["fast_trigger"], nl++,21)
+    _limamenu_printitem(ccdname, "shutter_level", items["shutter_level"], nl++,22)
+
+    option= getval("\n\n\tOption ---> ", 0)
+    printf("\n\n")
+
+
+    if(option=="r")
+      continue
+    if((option==1) || (option==12))
+      _limapar_ask(ccdname, "cooler",items["cooler"])
+    if((option==1) || (option==13))
+      _limapar_ask(ccdname, "temperature",items["temperature"])
+    if((option==2) || (option==21))
+      _limapar_ask(ccdname, "fast_trigger",items["fast_shutter"])
+    if((option==2) || (option==22))
+      _limapar_ask(ccdname, "shutter_level",items["shutter_level"])
+
+  }
+}'
+#%MACROS%
+#%IMACROS%
+#%TOC%
+#%AUTHOR% L.Claustre, $Revision: $, $Date: $

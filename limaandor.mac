@@ -16,16 +16,17 @@ def limaandorsetup(ccdname) '{
 
   _limapar_addconfig(ccdname, "cooling_status",LP_READ,1)
   _limapar_addconfig(ccdname, "cooler",LP_RW|LP_LIST,1)
-  _limapar_addconfig(ccdname, "temperature", LP_RW|LP_MOT, 1)
-
+  _limapar_addconfig(ccdname, "temperature_sp", LP_RW|LP_MOT, 1)
+  _limapar_addconfig(ccdname, "temperature", LP_READ, 1)
   _limapar_addconfig(ccdname, "fast_trigger",LP_RW|LP_LIST,1)
   _limapar_addconfig(ccdname, "shutter_level",LP_RW|LP_LIST,1)
   
   
 
   # --- parameter description
-  _limapar_addtext(ccdname, "cooler", "Cooler")
+  _limapar_addtext(ccdname, "cooler", "Cooler Mode")
   _limapar_addtext(ccdname, "cooling_status", "Cooling Status")
+  _limapar_addtext(ccdname, "temperature_sp", "Temperature set-point")  
   _limapar_addtext(ccdname, "temperature", "Sensor Temperature")  
   _limapar_addtext(ccdname, "fast_trigger", "Fast Trigger Mode")  
   _limapar_addtext(ccdname, "shutter_level", "Shutter Level Mode")
@@ -42,6 +43,7 @@ def limaandormenu(ccdname) '{
   
   items["cooling_status"] = ""
   items["cooler"] = ""
+  items["temperature_sp"] = -1
   items["temperature"] = -1
   items["fast_trigger"] = ""
   items["shutter_level"] = ""
@@ -53,18 +55,17 @@ def limaandormenu(ccdname) '{
     for (parname in items) {
       items[parname]= _limapar_get(ccdname, parname)
     }
-    
     nl = _limamenu_printtitle(ccdname, "Configuration", "config")
     
     tty_move(0, nl, "(1) Temperature Control :")
-    tty_move(25, nl++, sprintf(" <\[md\]%s\[me\]>", items["cooling_status"]))
-    tty_move(5,nl++, sprintf("(r) %s", "Refresh status"))
+    tty_move(25, nl++, sprintf(" Sensor @  \[md\]%d\[me\] C", items["temperature"]))
+    tty_move(4, nl++, sprintf(" (r)  Status \[md\]%s\[me\]", items["cooling_status"]))
     _limamenu_printitem(ccdname, "cooler", items["cooler"], nl++,12)
-    _limamenu_printitem(ccdname, "temperature", items["temperature"], nl++,13)
+    _limamenu_printitem(ccdname, "temperature_sp", items["temperature_sp"], nl++,13)
     nl++
     tty_move(0, nl++, "(2) Input/Output Signals :")
-    _limamenu_printitem(ccdname, "fast_trigger", items["fast_trigger"], nl++,21)
-    _limamenu_printitem(ccdname, "shutter_level", items["shutter_level"], nl++,22)
+    _limamenu_printitem(ccdname, "Fast Trigger Mode", items["fast_trigger"], nl++,21)
+    _limamenu_printitem(ccdname, "Shutter Level Mode", items["shutter_level"], nl++,22)
 
     option= getval("\n\n\tOption ---> ", 0)
     printf("\n\n")
@@ -75,7 +76,7 @@ def limaandormenu(ccdname) '{
     if((option==1) || (option==12))
       _limapar_ask(ccdname, "cooler",items["cooler"])
     if((option==1) || (option==13))
-      _limapar_ask(ccdname, "temperature",items["temperature"])
+      _limapar_ask(ccdname, "temperature_sp",items["temperature_sp"])
     if((option==2) || (option==21))
       _limapar_ask(ccdname, "fast_trigger",items["fast_shutter"])
     if((option==2) || (option==22))

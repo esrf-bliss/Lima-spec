@@ -74,6 +74,10 @@ def limasetup '{
 
   # --- hook to ccd.mac setup menu
   cdef("_user_ccd_private_menu", "_limamenu_ccdprivate\n", "lima")
+
+  # --- hook to ccd.mac to update cached resize operations
+  cdef("ccd_post_createarray", "_limacontrol_post_createarray(__ccd_u)\n", \
+       "lima")
 }'
 
 #%IU% (ccdname)
@@ -89,6 +93,8 @@ def _lima_initconfig(ccdname) '{
 
   _limapar_addcontrol(ccdname, "lima_type", LP_READ, 1)
   _limapar_addtext(ccdname, "lima_type", "Lima internal CCD type")
+
+  LIMA_DEV[ccdname]["in_resize"] = 0
 }'
 
 if (!(whatis("_limatype_init")&2))   rdef _limatype_init   ""
@@ -597,8 +603,38 @@ def _limacontrol_setpar(ccdname, parname, value) '{
    local unit
    unit  = LIMA_DEV[ccdname]["unit"]
    image_par(unit, "resize") 
+   LIMA_DEV[ccdname]["in_resize"] = 1
    ccd_createarray unit
+   LIMA_DEV[ccdname]["in_resize"] = 0
  }
+}'
+
+#%IU%
+#%MDESC%
+# callback from ccd.mac to update parameter change
+#
+def _limacontrol_post_createarray(ccdunit) '{
+  local ccdname nbin[] nroi[]
+
+  ccdname = _lima_getccdname(ccdunit)
+  if (LIMA_DEV[ccdname]["in_resize"])
+    return 0
+
+  nbin[0] = image_par(ccdunit, "col_bin")
+  nbin[1] = image_par(ccdunit, "row_bin")
+  _limapar_set(ccdname, "image_bin", nbin, -1)
+
+  nroi[0] = image_par(ccdunit, "col_beg")
+  nroi[1] = image_par(ccdunit, "row_beg")
+  nroi[2] = image_par(ccdunit, "col_end") + 1 - image_par(ccdunit, "col_beg")
+  nroi[3] = image_par(ccdunit, "row_end") + 1 - image_par(ccdunit, "row_beg")
+  if ((nroi[0] == 0) && (nroi[1] == 0) && \
+      (nroi[2] >= image_par(ccdunit, "cols")) && \
+      (nroi[3] >= image_par(ccdunit, "rows"))) {
+    nroi[2] = image_par(ccdunit, "cols")
+    nroi[3] = image_par(ccdunit, "rows")
+  }
+  _limapar_set(ccdname, "image_roi", nroi, -1)
 }'
 
 constant LP_READ 0x01

@@ -14,9 +14,13 @@ def limaperkinelmersetup(ccdname) '{
 
   # --- parameter definition
   _limapar_addconfig(ccdname, "correction_mode",LP_RW|LP_LIST,1)
+  _limapar_addconfig(ccdname, "keep_first_image",LP_RW|LP_LIST,1)
+  _limapar_addconfig(ccdname, "gain",LP_RW|LP_MOT,1,"long")
 
   # --- parameter description
   _limapar_addtext(ccdname, "correction_mode", "Correction")
+  _limapar_addtext(ccdname, "keep_first_image", "Keep first image")
+  _limapar_addtext(ccdname, "gain", "Detector gain")
 }'
 
 lima_addlimatype("PerkinElmer", "limaperkinelmersetup", "limaperkinelmermenu")
@@ -27,6 +31,8 @@ def limaperkinelmermenu(ccdname) '{
   local nl option
 
   items["correction_mode"] = "NO"
+  items["keep_first_image"] = "NO"
+  items["gain"] = 0
   option= 1
 
   while (option) {
@@ -39,6 +45,8 @@ def limaperkinelmermenu(ccdname) '{
 
     tty_move(0, nl++, "(1) Configuration :")
     _limamenu_printitem(ccdname, "correction_mode", items["correction_mode"], nl++,11)
+    _limamenu_printitem(ccdname, "keep_first_image", items["keep_first_image"], nl++,12)
+    _limamenu_printitem(ccdname, "gain", items["gain"], nl++,13)
     nl++
 
     option= getval("\n\n\tOption ---> ", 0)
@@ -46,6 +54,10 @@ def limaperkinelmermenu(ccdname) '{
 
     if((option==1) || (option==11))
       _limapar_ask(ccdname, "correction_mode",items["correction_mode"])
+    if((option==1) || (option==12))
+      _limapar_ask(ccdname, "keep_first_image",items["keep_first_image"])
+    if((option==1) || (option==13))
+      _limapar_ask(ccdname, "gain",items["gain"])
   }
 }'
 #%MACROS%

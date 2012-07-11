@@ -29,7 +29,7 @@ def _limaroi_init() '{
   global LIMA_ROI[]
   if (list_n(LIMA_ROI)<0)
     list_init LIMA_ROI
-	cdef("user_getcounts", "_limaroi_getcounts\n", "limaroi", 0x20)
+	cdef("user_getcounts", "_limaroi_getcounts\n", "limaroi", 0x10)
 }'
 
 def user_limaroi_add '#$*'

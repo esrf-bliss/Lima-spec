@@ -423,7 +423,7 @@ def _limamot_moveall '{
 def _limacnt_init() '{
   global LIMA_CNT[]
   list_test LIMA_CNT
-  cdef("user_getcounts", "_limacnt_getcounts\n", "limacnt", 0x20)
+  cdef("user_getcounts", "_limacnt_getcounts\n", "limacnt", 0x10)
 }'
 
 #%UU% <ccdname> [<parname> <cnt_mne>]

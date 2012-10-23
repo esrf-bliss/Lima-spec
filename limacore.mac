@@ -546,12 +546,13 @@ def _limapar_controlinit(ccdname, version) '{
   _limapar_addcontrol(ccdname, "shutter_mode", LP_RW|LP_LIST, 1)
   _limapar_addcontrol(ccdname, "shutter_close_time", LP_RW, 1)
   _limapar_addcontrol(ccdname, "shutter_open_time", LP_RW, 1)
-  _limapar_addcontrol(ccdname, "shutter_state", LP_READ, 1)
+  _limapar_addcontrol(ccdname, "shutter_manual_state", LP_READ, 1)
 
   _limapar_addtext(ccdname, "shutter_mode", "Shutter control mode")
   _limapar_addtext(ccdname, "shutter_close_time", "Shutter closing time [sec]")
   _limapar_addtext(ccdname, "shutter_open_time", "Shutter opening time [sec]")
-  _limapar_addtext(ccdname, "shutter_state", "Shutter state in manual mode")
+  _limapar_addtext(ccdname, "shutter_manual_state", \
+                            "Shutter state in manual mode")
 
   # --- status
 	_limapar_addcontrol(ccdname, "last_image_ready", LP_READ|LP_CNT, 1)
@@ -982,7 +983,7 @@ def _limamenu_control(ccdname) '{
   items["latency_time"]= 0
   items["acc_max_expo_time"]= 0
   items["shutter_mode"]= ""
-  items["shutter_state"]= ""
+  items["shutter_manual_state"]= ""
   items["shutter_open_time"]= 0
   items["shutter_close_time"]= 0
 
@@ -996,15 +997,21 @@ def _limamenu_control(ccdname) '{
 
     tty_move(0, nl++, "(1) Acquisition :")
     _limamenu_printitem(ccdname, "acq_mode", items["acq_mode"], nl++, 11)
-    _limamenu_printitem(ccdname, "latency_time", items["latency_time"], nl++, 12)
-    _limamenu_printitem(ccdname, "acc_max_expo_time", items["acc_max_expo_time"], nl++, 13)
+    _limamenu_printitem(ccdname, "latency_time", \
+                                 items["latency_time"], nl++, 12)
+    _limamenu_printitem(ccdname, "acc_max_expo_time", \
+                                 items["acc_max_expo_time"], nl++, 13)
     nl++
     
     tty_move(0, nl++, "(2) Shutter :")
-    _limamenu_printitem(ccdname, "shutter_mode", items["shutter_mode"], nl++, 21)
-    _limamenu_printitem(ccdname, "shutter_state", items["shutter_state"], nl++, 22)
-    _limamenu_printitem(ccdname, "shutter_open_time", items["shutter_open_time"], nl++, 23)
-    _limamenu_printitem(ccdname, "shutter_close_time", items["shutter_close_time"], nl++, 24)
+    _limamenu_printitem(ccdname, "shutter_mode", \
+                                 items["shutter_mode"], nl++, 21)
+    _limamenu_printitem(ccdname, "shutter_manual_state", \
+                                 items["shutter_manual_state"], nl++, 22)
+    _limamenu_printitem(ccdname, "shutter_open_time", \
+                                 items["shutter_open_time"], nl++, 23)
+    _limamenu_printitem(ccdname, "shutter_close_time", \
+                                 items["shutter_close_time"], nl++, 24)
     nl++
 
     tty_move(0, nl++, "(3) ROI counters Menu ....................... >>")
@@ -1025,7 +1032,8 @@ def _limamenu_control(ccdname) '{
     if ((option==2)||(option==21)) 
       _limapar_ask(ccdname, "shutter_mode", items["shutter_mode"])
     if ((option==2)||(option==22)) 
-      _limapar_ask(ccdname, "shutter_state", items["shutter_state"])
+      _limapar_ask(ccdname, "shutter_manual_state", \
+                            items["shutter_manual_state"])
     if ((option==2)||(option==23))
       _limapar_ask(ccdname, "shutter_open_time", items["shutter_open_time"])
     if ((option==2)||(option==24))

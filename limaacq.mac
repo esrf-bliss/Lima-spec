@@ -21,60 +21,70 @@
 # Take a serie of images in multi-frame mode using active lima CCD device(s) (active lima ccd
 # has to be set using %B%limaon/off%B% . Check it with %B%limalist%B%) %BR%
 # %BR% %B%exposure_time%B% : exposure time per frame (sec)
-# %BR% %B%nb_frames%B% : total number of frames to acquire
+# %BR% %B%nb_frames%B% : total number of frames to acquire (%B%0%B% for LIVE mode )
 # %BR% %B%interval_time%B% : interval time between frames programmed on the ccd controller
 # %BR% %B%display_rate%B% : by default, spec reads about 4 frames/sec to update shared memory for online display.
 # You can change that and set it to: %B%0%B% to have no image reading, %B%-1%B% to force reading all images, %B%>0%B% to change the approximate reading rate.
 # %BR% %BR%
+# For %B%LIVE%B% mode use %B%nb_frames = 0%B% and %B%Ctr-C%B% to stop
+# %BR% %BR%
 # Saving of frame can be enabled through ccdmenu
 def limatake '{
-  local _expo _nimg _rate _fname _it_time
-  local nccd ccds[]
+    local _expo _nimg _rate _fname _it_time
+    local nccd ccds[]
 
-  if (!$#) {
-	  print "Usage: $0 <exposure_time> [<nb_frames>] [<interval_time>] [<display_rate>]"
-    exit
-  }
+    if (!$#) {
+        print "Usage: $0 <exposure_time> [<nb_frames>] [<interval_time>] [<display_rate>]"
+        print "            LIVE mode: <nb_frames> = 0 (Ctr-C to stop)"
+        exit
+    }
 
-  # -- active ccds
-  nccd= _lima_getactive(ccds)
-  if (!nccd) {
-    _lima_error; printf("No active lima ccd. Use limaon first.\n")
-    exit
-  }
+    # -- active ccds
+    nccd= _lima_getactive(ccds)
+    if (!nccd) {
+        _lima_error; printf("No active lima ccd. Use limaon first.\n")
+        exit
+    }
 
-  # -- expo time
-  _expo= $1
+    # -- expo time
+    _expo= $1
 
-  if (int($2)!=$2) {
-	  print "Ooops !! nb_frames is not an integer !!"
-	  print "         don\'t you mixed exposure_time and nb_frames ??"
-	  exit
-  }
+    # -- number of images
+    if ($#>1) {
+        if ((_nimg = int($2)) != $2) {
+            print "Ooops !! nb_frames is not an integer !!"
+            print "         don\'t you mixed exposure_time and nb_frames ??"
+            exit
+        }
 
-  # -- number of images
-  _nimg= int($2)
-  if (!_nimg) _nimg= 1
+        if (_nimg <= 0) {
+            _nimg= 0
+            print "LIVE mode is running (hint: Ctr-C to stop)"
+        }
+    } else {
+        _nimg= 1
+    }
 
-  # -- interval time between images
-  if ($#>2) {
-	  if ($3 != $3+0.) {
-	    print "Ooops !! interval_time seems not a float value !!"
-	    exit
-	  }
-	  _it_time= $3
-  } else {
-	  _it_time= 0.
-  }
 
-  # -- read rate
-  _rate= ($#==4) ? $4+0. : (0.25*nccd)
+    # -- interval time between images
+    if ($#>2) {
+        if ($3 != $3+0.) {
+            print "Ooops !! interval_time seems not a float value !!"
+            exit
+        }
+        _it_time= $3
+    } else {
+        _it_time= 0.
+    }
 
-  # -- open GUI
-  _limatake_display(ccds)
+    # -- read rate
+    _rate= ($#==4) ? $4+0. : (0.25*nccd)
 
-  # -- acquisition
-  _limatake(ccds, _expo, _nimg, _it_time, _rate)
+    # -- open GUI
+    _limatake_display(ccds)
+
+    # -- acquisition
+    _limatake(ccds, _expo, _nimg, _it_time, _rate)
 }'
 
 #%IU%

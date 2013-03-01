@@ -17,7 +17,7 @@ def limabaslersetup(ccdname) '{
   # --- parameter description
 }'
 
-lima_addlimatype("Balser", "limabaslersetup", "limabaslermenu")
+lima_addlimatype("Basler", "limabaslersetup", "limabaslermenu")
 
 
 def limabaslermenu(ccdname) '{

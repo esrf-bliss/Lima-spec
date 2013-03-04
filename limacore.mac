@@ -528,10 +528,10 @@ def _limapar_controlinit(ccdname, version) '{
   # _limapar_addcontrol(ccdname, "image_width", LP_READ, 1)
   # _limapar_addcontrol(ccdname, "image_height", LP_READ, 1)
   _limapar_addcontrol(ccdname, "image_sizes", LP_READ, 4, "ulong")
-  _limapar_addcontrol(ccdname, "image_bin", LP_RW, 2, "ulong")
-  _limapar_addcontrol(ccdname, "image_flip", LP_RW, 2, "ushort")
-  _limapar_addcontrol(ccdname, "image_rotation", LP_RW|LP_LIST, 1)
-  _limapar_addcontrol(ccdname, "image_roi", LP_RW, 4, "ulong")
+  _limapar_addcontrol(ccdname, "image_bin", LP_RW|LP_CB, 2, "ulong")
+  _limapar_addcontrol(ccdname, "image_flip", LP_RW|LP_CB, 2, "ushort")
+  _limapar_addcontrol(ccdname, "image_rotation", LP_RW|LP_LIST|LP_CB, 1)
+  _limapar_addcontrol(ccdname, "image_roi", LP_RW|LP_CB, 4, "ulong")
 
   _limapar_addtext(ccdname, "image_type", "Image lima data type")
   # _limapar_addtext(ccdname, "image_width", "Width of image")
@@ -598,8 +598,13 @@ def _limapar_controlinit(ccdname, version) '{
 # callback on parameter set
 #
 def _limacontrol_setpar(ccdname, parname, value) '{
- if (parname == "acq_mode") {
-   _lima_trace ccdname; printf("CB on %s = %s\n", parname, value)
+ if (parname == "acq_mode" || \
+     parname == "image_flip" || \
+     parname == "image_rotation" || \
+     parname == "image_bin" || \
+     parname == "image_roi" ) {
+
+
    #need to inform SPEC about image type change
    local unit
    unit  = LIMA_DEV[ccdname]["unit"]

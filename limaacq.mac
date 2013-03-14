@@ -401,18 +401,21 @@ def _limaacq_arrayinit(ccdname) '{
 
 
 def _limaacq_checksaving(ccdname) '{
-  local savmode savfmt savdir savpre savsuf savnum
+  local savmode savfmt savdir savpre savsuf savnum savidxfmt idx
 
   savmode= _limapar_get(ccdname, "saving_mode")
   if (savmode != "MANUAL") {
     savfmt= _limapar_get(ccdname, "saving_format")
+    savidxfmt= _limapar_get(ccdname, "saving_index_format")
     savdir= _limapar_get(ccdname, "saving_directory")
     savpre= _limapar_get(ccdname, "saving_prefix")
     savsuf= _limapar_get(ccdname, "saving_suffix")
     savnum= _limapar_get(ccdname, "saving_next_number")
 
     _lima_trace ccdname
-    printf("Saving in %s/%s%04d%s [%s-%s]\n", savdir, savpre, savnum, savsuf, savmode, savfmt)
+
+    idx = sprintf(savidxfmt,  savnum)
+    printf("Saving in %s/%s%s%s [%s-%s]\n", savdir, savpre, idx, savsuf, savmode, savfmt)
   }
   return savmode
 }'

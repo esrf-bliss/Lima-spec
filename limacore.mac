@@ -569,6 +569,7 @@ def _limapar_controlinit(ccdname, version) '{
   # --- saving
   _limapar_addcontrol(ccdname, "saving_mode", LP_RW|LP_LIST, 1)
   _limapar_addcontrol(ccdname, "saving_format", LP_RW|LP_LIST, 1)
+  _limapar_addcontrol(ccdname, "saving_index_format", LP_RW, 1)
   _limapar_addcontrol(ccdname, "saving_frame_per_file", LP_RW, 1)
   _limapar_addcontrol(ccdname, "saving_directory", LP_RW, 1)
   _limapar_addcontrol(ccdname, "saving_prefix", LP_RW, 1)
@@ -580,6 +581,7 @@ def _limapar_controlinit(ccdname, version) '{
 
   _limapar_addtext(ccdname, "saving_mode", "Saving mode")
   _limapar_addtext(ccdname, "saving_format", "Saving file format")
+  _limapar_addtext(ccdname, "saving_index_format", "Saving index format")
   _limapar_addtext(ccdname, "saving_frame_per_file", "Number of images saved per file")
   _limapar_addtext(ccdname, "saving_directory", "Saving directory")
   _limapar_addtext(ccdname, "saving_prefix", "Filename prefix")

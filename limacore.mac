@@ -481,9 +481,11 @@ def _limapar_controlinit(ccdname, version) '{
   # --- model  
 	_limapar_addcontrol(ccdname, "camera_type", LP_READ, 1)
   _limapar_addcontrol(ccdname, "camera_model", LP_READ, 1)
+  _limapar_addcontrol(ccdname, "camera_pixelsize", LP_READ, 2, "double")
 
   _limapar_addtext(ccdname, "camera_type", "Camera Type")
   _limapar_addtext(ccdname, "camera_model", "Camera Model")
+  _limapar_addtext(ccdname, "camera_pixelsize", "Camera Pixel Size")
 
   # --- acquisition
 	_limapar_addcontrol(ccdname, "acq_mode", LP_RW|LP_LIST|LP_CB, 1)
@@ -542,6 +544,13 @@ def _limapar_controlinit(ccdname, version) '{
   _limapar_addtext(ccdname, "image_rotation", "Image rotation")
   _limapar_addtext(ccdname, "image_roi", "Image ROI [X,Y,W,H]")
 
+  # --- shared memory
+  _limapar_addcontrol(ccdname, "shared_memory_active", LP_RW, 1)
+  _limapar_addcontrol(ccdname, "shared_memory_names", LP_RW, 2)
+
+  _limapar_addtext(ccdname, "shared_memory_active", "Shared memory active")
+  _limapar_addtext(ccdname, "shared_memory_names", "Shared memeory names")
+
   # --- shutter
   _limapar_addcontrol(ccdname, "shutter_mode", LP_RW|LP_LIST, 1)
   _limapar_addcontrol(ccdname, "shutter_close_time", LP_RW, 1)
@@ -555,12 +564,18 @@ def _limapar_controlinit(ccdname, version) '{
                             "Shutter state in manual mode")
 
   # --- status
-	_limapar_addcontrol(ccdname, "last_image_ready", LP_READ|LP_CNT, 1)
-	_limapar_addcontrol(ccdname, "last_image_saved", LP_READ|LP_CNT, 1)
+  _limapar_addcontrol(ccdname, "last_image_acquired", LP_READ, 1)
+  _limapar_addcontrol(ccdname, "last_base_image_ready", LP_READ, 1)
+  _limapar_addcontrol(ccdname, "last_image_ready", LP_READ|LP_CNT, 1)
+  _limapar_addcontrol(ccdname, "last_counter_ready", LP_READ, 1)
+  _limapar_addcontrol(ccdname, "last_image_saved", LP_READ|LP_CNT, 1)
   _limapar_addcontrol(ccdname, "ready_for_next_acq", LP_READ, 1)
   _limapar_addcontrol(ccdname, "ready_for_next_image", LP_READ, 1)
 
+  _limapar_addtext(ccdname, "last_image_acquired", "Last image acquired")
+  _limapar_addtext(ccdname, "last_base_image_ready", "Last base image ready")
   _limapar_addtext(ccdname, "last_image_ready", "Last image ready")
+  _limapar_addtext(ccdname, "last_counter_ready", "Last counter ready")
   _limapar_addtext(ccdname, "last_image_saved", "Last image saved")
   _limapar_addtext(ccdname, "ready_for_next_acq", "Is server ready for next acquisition")
   _limapar_addtext(ccdname, "ready_for_next_image", \
@@ -739,6 +754,7 @@ def _limapar_addconfig_cb(ccdname, macroname) '{
 
 #%IU% (parsize, partype)
 def _limapar_initarr(parsize, partype) '{
+  unglobal LIMA_VALS
   if (partype == "ushort")
     global ushort array LIMA_VALS[parsize]
   else if (partype == "short")

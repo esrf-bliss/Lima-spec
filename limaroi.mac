@@ -541,7 +541,7 @@ def _limaroi_server_defined(ccdname) '{
 }'
 
 def _limaroi_server_send(ccdname) '{
-  local nroi iroi roimne sendroi[]
+  local nroi iroi roimne sendroi[] roi_id[]
   local xmin xmax ymin ymax
   local state srv
 
@@ -557,23 +557,25 @@ def _limaroi_server_send(ccdname) '{
     }
   }
 
+  tango_io(srv,"add",sendroi,roi_id)
+
   if (nroi) {
-    local long array argroi[4*nroi]
+    local long array argroi[5*nroi]
 
     for (iroi=0; iroi<nroi; iroi++) {
       roimne= sendroi[iroi]
-
 		  xmin= LIMA_ROI[roimne]["xmin"]
 		  xmax= LIMA_ROI[roimne]["xmax"]
 		  ymin= LIMA_ROI[roimne]["ymin"]
 		  ymax= LIMA_ROI[roimne]["ymax"]
 
-      argroi[4*iroi + 0]= (xmax>xmin) ? xmin : xmax
-      argroi[4*iroi + 1]= (ymax>ymin) ? ymin : ymax
-      argroi[4*iroi + 2]= fabs(xmax-xmin)+1
-      argroi[4*iroi + 3]= fabs(ymax-ymin)+1
+      argroi[5*iroi + 0]= roi_id[iroi]
+      argroi[5*iroi + 1]= (xmax>xmin) ? xmin : xmax
+      argroi[5*iroi + 2]= (ymax>ymin) ? ymin : ymax
+      argroi[5*iroi + 3]= fabs(xmax-xmin)+1
+      argroi[5*iroi + 4]= fabs(ymax-ymin)+1
 
-      LIMA_ROI_SRV[ccdname][iroi]= roimne
+      LIMA_ROI_SRV[ccdname][roi_id[iroi]]= roimne
     }
     LIMA_ROI_SRV[ccdname]["nroi"]= nroi
 
@@ -581,7 +583,7 @@ def _limaroi_server_send(ccdname) '{
     if (state!=0) {
       tango_io(srv, "Start")
     }
-    tango_io(srv, "set", argroi)
+    tango_io(srv, "setRoi", argroi)
   }
 
   return (nroi)

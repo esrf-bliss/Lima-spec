@@ -37,7 +37,6 @@ def limafrelonsetup(ccdname) '{
 lima_addlimatype("Frelon", "limafrelonsetup", "limafrelonmenu")
 
 def _limafrelon_setpar(ccdname, parname, value) '{
-  _lima_trace ccdname; printf("CB on <%s>\n", parname)
   if (parname == "config_name") {
    #need to inform SPEC about possible image type change
    local unit

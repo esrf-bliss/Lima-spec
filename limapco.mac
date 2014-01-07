@@ -18,14 +18,26 @@ def limapcosetup(ccdname) '{
   _limapar_addconfig(ccdname, "pixelRate",LP_RW|LP_LIST,1)
   _limapar_addtext(ccdname, "pixelRate", "Pco Edge pixel rate (MHz)")
 
-  _limapar_addconfig(ccdname, "camInfo",LP_RD,1)
+  _limapar_addconfig(ccdname, "camInfo",LP_READ,1)
   _limapar_addtext(ccdname, "camInfo", "Pco general cam info")
 
-  _limapar_addconfig(ccdname, "camType",LP_RD,1)
+  _limapar_addconfig(ccdname, "camType",LP_READ,1)
   _limapar_addtext(ccdname, "camType", "Pco cam info")
 
   _limapar_addconfig(ccdname, "rollingShutter",LP_RW|LP_LIST,1)
   _limapar_addtext(ccdname, "rollingShutter", "Pco Edge Rolling/Global shutter")
+
+  _limapar_addconfig(ccdname, "maxNbImages",LP_READ,1)
+  _limapar_addtext(ccdname, "maxNbImages", "Maximum number of images")
+
+  _limapar_addconfig(ccdname, "frameRate",LP_READ,1)
+  _limapar_addtext(ccdname, "frameRate", "Frame Rate (Hz)")
+
+  _limapar_addconfig(ccdname, "cocRunTime",LP_READ,1)
+  _limapar_addtext(ccdname, "cocRunTime", "Frame run time (sec)")
+
+
+
 }'
 
 #=====================================================================

@@ -804,7 +804,7 @@ def _limapar_list(ccdname, devtype, propmask, vals) '{
   local ipar arrname parname
   arrname= LIMA_DEV[ccdname]["arrname"]
   nval= 0
-  for (ipar=1; ipar<list_n(@arrname); ipar++) {
+  for (ipar=1; ipar<=list_n(@arrname); ipar++) {
     parname= list_item(@arrname, ipar)
     if ((@arrname[parname]["devtype"]==devtype)&& \
        ((!propmask) || (@arrname[parname]["property"]&propmask))) {

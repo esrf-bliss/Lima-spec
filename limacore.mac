@@ -479,7 +479,7 @@ def _lima_getccdname(ccdunit) '{
 def _limapar_controlinit(ccdname, version) '{
 
   # --- model  
-	_limapar_addcontrol(ccdname, "camera_type", LP_READ, 1)
+  _limapar_addcontrol(ccdname, "camera_type", LP_READ, 1)
   _limapar_addcontrol(ccdname, "camera_model", LP_READ, 1)
   _limapar_addcontrol(ccdname, "camera_pixelsize", LP_READ, 2, "double")
 
@@ -488,10 +488,11 @@ def _limapar_controlinit(ccdname, version) '{
   _limapar_addtext(ccdname, "camera_pixelsize", "Camera Pixel Size")
 
   # --- acquisition
-	_limapar_addcontrol(ccdname, "acq_mode", LP_RW|LP_LIST|LP_CB, 1)
+  _limapar_addcontrol(ccdname, "acq_mode", LP_RW|LP_LIST|LP_CB, 1)
   _limapar_addcontrol(ccdname, "acq_nb_frames", LP_RW, 1)
   _limapar_addcontrol(ccdname, "acq_expo_time", LP_RW, 1)
-	_limapar_addcontrol(ccdname, "latency_time", LP_RW, 1)
+  _limapar_addcontrol(ccdname, "latency_time", LP_RW, 1)
+  _limapar_addcontrol(ccdname, "valid_ranges", LP_RW, 4,"double")
   _limapar_addcontrol(ccdname, "acq_trigger_mode", LP_RW|LP_LIST, 1)
   _limapar_addcontrol(ccdname, "acq_status", LP_READ, 1)
 
@@ -499,6 +500,7 @@ def _limapar_controlinit(ccdname, version) '{
   _limapar_addtext(ccdname, "acq_nb_frames", "Number of frames")
   _limapar_addtext(ccdname, "acq_expo_time", "Exposure time [sec]")
   _limapar_addtext(ccdname, "latency_time", "Latency Time between frames [sec]")
+  _limapar_addtext(ccdname, "valid_ranges", "Valid ranges for timing,[min-expo,max-expo,min-latency,max-latency]")
   _limapar_addtext(ccdname, "acq_trigger_mode", "Acquisition trigger mode")
   _limapar_addtext(ccdname, "acq_status", "Acquisition status")
 
@@ -616,7 +618,6 @@ def _limapar_controlinit(ccdname, version) '{
 #
 def _limacontrol_setpar(ccdname, parname, value) '{
  if (parname == "acq_mode") {
-   _lima_trace ccdname; printf("CB on %s = %s\n", parname, value)
    #need to inform SPEC about image type change
    local unit
    unit  = LIMA_DEV[ccdname]["unit"]

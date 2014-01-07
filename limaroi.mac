@@ -541,7 +541,7 @@ def _limaroi_server_defined(ccdname) '{
 }'
 
 def _limaroi_server_send(ccdname) '{
-  local nroi iroi roimne sendroi[]
+  local nroi iroi roimne sendroi[] roi_id[]
   local xmin xmax ymin ymax
   local state srv
 
@@ -557,31 +557,35 @@ def _limaroi_server_send(ccdname) '{
     }
   }
 
+  tango_io(srv,"add",sendroi,roi_id)
+
   if (nroi) {
-    local long array argroi[4*nroi]
+    local long array argroi[5*nroi]
 
     for (iroi=0; iroi<nroi; iroi++) {
       roimne= sendroi[iroi]
-
 		  xmin= LIMA_ROI[roimne]["xmin"]
 		  xmax= LIMA_ROI[roimne]["xmax"]
 		  ymin= LIMA_ROI[roimne]["ymin"]
 		  ymax= LIMA_ROI[roimne]["ymax"]
 
-      argroi[4*iroi + 0]= (xmax>xmin) ? xmin : xmax
-      argroi[4*iroi + 1]= (ymax>ymin) ? ymin : ymax
-      argroi[4*iroi + 2]= fabs(xmax-xmin)+1
-      argroi[4*iroi + 3]= fabs(ymax-ymin)+1
+      argroi[5*iroi + 0]= roi_id[iroi]
+      argroi[5*iroi + 1]= (xmax>xmin) ? xmin : xmax
+      argroi[5*iroi + 2]= (ymax>ymin) ? ymin : ymax
+      argroi[5*iroi + 3]= fabs(xmax-xmin)+1
+      argroi[5*iroi + 4]= fabs(ymax-ymin)+1
 
-      LIMA_ROI_SRV[ccdname][iroi]= roimne
+      LIMA_ROI_SRV[ccdname][roi_id[iroi]]= roimne
     }
     LIMA_ROI_SRV[ccdname]["nroi"]= nroi
+    # TODO 
+    #LIMA_ROI_SRV[ccdname]["roi_id"]
 
     state= tango_get(srv, "State")
     if (state!=0) {
       tango_io(srv, "Start")
     }
-    tango_io(srv, "set", argroi)
+    tango_io(srv, "setRoi", argroi)
   }
 
   return (nroi)
@@ -603,11 +607,12 @@ def _limaroi_server_initarr(ccdname, maxpt) '{
   if (nroi) {
     for (iroi=0; iroi<nroi; iroi++) {
       roiarr= sprintf("ROICNT_%s_%s", ccdname, LIMA_ROI_SRV[ccdname][iroi])
-      double array @roiarr[maxpt][3]
+      double array @roiarr[maxpt][5]
       @roiarr[:][:]= 0.
     }
     roiarr= sprintf("ROICNT_READ_%s", ccdname)
-    double array @roiarr[1+(nroi*4*maxpt)]
+    # roi_id/frame_nb/sum/avg/std/min/max --> 7 values
+    double array @roiarr[1+(nroi*7*maxpt)]
   }
   return (nroi)
 }'
@@ -616,7 +621,7 @@ def _limaroi_server_read(ccdname, frompt) '{
   local nroi rois[] iroi 
   local readarr roiarr offset
   local iframe nframe lastpt lastrd
-  local srv
+  local srv frame_num niter
 
   srv= list_getpar(LIMA_ROI_SRV, ccdname, "device")
   if (srv==-1)
@@ -627,21 +632,38 @@ def _limaroi_server_read(ccdname, frompt) '{
     lastpt= tango_get(srv, "CounterStatus")
     if (lastpt > frompt) {
       readarr= sprintf("ROICNT_READ_%s", ccdname)
-      tango_io(srv, "readCounters", (frompt==-1?0:frompt), @readarr)
+      elnb = tango_io(srv, "readCounters", (frompt==-1?0:frompt), @readarr)
 
-      nframe= @readarr[0]
-      offset= 1
-      if (nframe) {
-        for (iroi= 0; iroi<nroi; iroi++) {
-          roiarr= sprintf("ROICNT_%s_%s", ccdname, LIMA_ROI_SRV[ccdname][iroi])
-          for (iframe=0; iframe<nframe; iframe++) {
-            @roiarr[int(@readarr[offset])][0:2]= @readarr[offset+1:offset+3]
-            offset+=4
-          }
-        }
+      # new command returns rois as a list of roi result for each frame by roi:
+      # e.g for 2 rois and 3 frames:
+      #result[0]  --> roi id 0
+      #result[1] --> frame 0 (or frompt)
+      #result[2:6] --> sum/avg/std/min/max
+      #result[7] --> roi id 0
+      #result[8[ --> frame 1 (or frompt+1)
+      #result[9:13] --> sum/avg/std/min/max
+      #resut[14] --> roi id 0
+      #result[15] --> frame 2
+      #result[16:20] --> sum/avg/std/min/max
+      #resut[21] --> roi id 1
+      #result[22] --> frame 0      
+      #....
+      
+      # 7 values for each frame (roi_id/frame_nb/sum/avg/std/min/max) times nroi
+      niter = elnb/7
+      nframe= elnb/7/nroi
+      lastrd = frompt  
+      for(i = 0;i < niter;i += 7)
+      {
+         local roi_id frame_id sum avg std minVal maxVal
+	 roi_id = @readarr[i]
+	 frame_id = @readarr[i + 1]
+         if(frame_id > lastrd)
+	    lastrd = frame_id 
+	 roiarr= sprintf("ROICNT_%s_%s", ccdname, LIMA_ROI_SRV[ccdname][roi_id])
+	 @roiarr[frame_id][0:4] = @readarr[i+2:i+6]
       }
     }
-    lastrd= frompt + nframe - 1
     lastrd= (lastrd > 0) ? lastrd : 0
     return (lastrd)
   } else {

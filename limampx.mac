@@ -63,7 +63,6 @@ def limampxsetup(ccdname) '{
 lima_addlimatype("Maxipix", "limampxsetup", "limampxmenu")
 
 def _limampx_setpar(ccdname, parname, value) '{
-  _lima_trace ccdname; printf("CB on <%s>\n", parname)
   if (parname == "config_name") {
    #need to inform SPEC about possible image type change
    local unit

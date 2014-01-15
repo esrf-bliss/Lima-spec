@@ -14,7 +14,7 @@ def limapilatussetup(ccdname) '{
   _limapar_addtext(ccdname, "threshold_gain", "Threshold Gain")
   _limapar_addtext(ccdname, "threshold", "Threshold value in (eV)")
   _limapar_addtext(ccdname, "fill_mode", "Pixel Gap Filling")
-  _limapar_addtext(ccdname, "energy_threshold", "Energy Threshold")
+  _limapar_addtext(ccdname, "energy_threshold", "Energy Threshold (keV)")
 }'
 
 lima_addlimatype("Pilatus", "limapilatussetup", "limapilatusmenu")

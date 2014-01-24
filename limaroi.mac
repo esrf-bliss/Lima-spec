@@ -630,7 +630,7 @@ def _limaroi_server_read(ccdname, frompt) '{
   nroi= LIMA_ROI_SRV[ccdname]["nroi"]
   if (nroi) {
     lastpt= tango_get(srv, "CounterStatus")
-    if (lastpt > frompt) {
+    if (lastpt >= frompt) {
       readarr= sprintf("ROICNT_READ_%s", ccdname)
       elnb = tango_io(srv, "readCounters", (frompt==-1?0:frompt), @readarr)
 
@@ -653,7 +653,7 @@ def _limaroi_server_read(ccdname, frompt) '{
       niter = elnb/7
       nframe= elnb/7/nroi
       lastrd = frompt  
-      for(i = 0;i < niter;i += 7)
+      for(i = 0;i < elnb;i += 7)
       {
          local roi_id frame_id sum avg std minVal maxVal
 	 roi_id = @readarr[i]

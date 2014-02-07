@@ -14,7 +14,7 @@ def limafrelonsetup(ccdname) '{
 
   # --- parameter definition
   _limapar_addconfig(ccdname, "espia_dev_nb", LP_READ, 1)
-  _limapar_addconfig(ccdname, "image_mode",LP_RW|LP_LIST,1)
+  _limapar_addconfig(ccdname, "image_mode",LP_RW|LP_LIST|LP_CB,1)
   _limapar_addconfig(ccdname, "input_channel",LP_RW|LP_LIST,1)
   _limapar_addconfig(ccdname, "roi_mode",LP_RW|LP_LIST,1)
   _limapar_addconfig(ccdname, "roi_bin_offset",LP_RW,1,"long")
@@ -22,7 +22,7 @@ def limafrelonsetup(ccdname) '{
   _limapar_addconfig(ccdname, "spb2_config",LP_RW|LP_LIST,1)
 
   # --- callback macro on parameter set
-  #_limapar_addconfig_cb(ccdname, "_limafrelon_setpar")
+  _limapar_addconfig_cb(ccdname, "_limafrelon_setpar")
 
   # --- parameter description
   _limapar_addtext(ccdname, "espia_dev_nb", "Espia board number")
@@ -37,7 +37,8 @@ def limafrelonsetup(ccdname) '{
 lima_addlimatype("Frelon", "limafrelonsetup", "limafrelonmenu")
 
 def _limafrelon_setpar(ccdname, parname, value) '{
-  if (parname == "config_name") {
+  #_lima_trace ccdname; printf("CB on <%s>\n", parname)
+  if (parname == "image_mode") {
    #need to inform SPEC about possible image type change
    local unit
    unit  = LIMA_DEV[ccdname]["unit"]
@@ -85,17 +86,14 @@ def limafrelonmenu(ccdname) '{
     _limamenu_printitem(ccdname, "spb2_config",items["spb2_config"],nl++,26)
     nl++
 
+    tty_move(0, nl++, "(3) Reset Link")
+    nl++
+
     option= getval("\n\n\tOption ---> ", 0)
     printf("\n\n")
 
     if((option==2) || (option==21))
-      {
-        local unit
-        _limapar_ask(ccdname, "image_mode",items["image_mode"])
-        unit  = LIMA_DEV[ccdname]["unit"]
-        image_par(unit, "resize")
-      }
-
+      _limapar_ask(ccdname, "image_mode",items["image_mode"])
     if((option==2) || (option==22))
       _limapar_ask(ccdname, "input_channel",items["input_channel"])
     if((option==2) || (option==23))
@@ -106,6 +104,10 @@ def limafrelonmenu(ccdname) '{
       _limapar_ask(ccdname, "e2v_correction",items["e2v_correction"])
     if((option==2) || (option==26))
       _limapar_ask(ccdname, "spb2_config",items["spb2_config"])
+
+
+    if(option==3)
+      tango_io(LIMA_DEV[ccdname]["config"], "resetLink")
   }
 }'
 #%MACROS%

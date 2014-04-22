@@ -12,49 +12,48 @@ def limarayonixhssetup(ccdname) '{
   _limapar_controlinit(ccdname, 0)
 
   # --- parameter definition
-  _limapar_addconfig(ccdname, "config_name", LP_RW|LP_LIST|LP_CB, 1)
-  _limapar_addconfig(ccdname, "config_path", LP_RW, 1)
+  _limapar_addconfig(ccdname, "frame_mode", LP_RW|LP_LIST|LP_CB, 1)
 
-  _limapar_addconfig(ccdname, "fill_mode", LP_RW|LP_LIST, 1)
+  _limapar_addconfig(ccdname, "cooler", LP_RW|LP_LIST, 1)
+  _limapar_addconfig(ccdname, "vacuum_valve", LP_RW|LP_LIST, 1)
 
-  _limapar_addconfig(ccdname, "threshold", LP_RW|LP_MOT, 1)
-  _limapar_addconfig(ccdname, "energy_threshold", LP_RW|LP_MOT, 1)
-  _limapar_addconfig(ccdname, "threshold_noise", LP_RW|LP_MOT, 5, "long")
-  _limapar_addconfig(ccdname, "energy_calibration", LP_RW|LP_MOT, 5, "double")
+  _limapar_addconfig(ccdname, "sensor_temperature", LP_READ, 1, "double")
+  _limapar_addconfig(ccdname, "cooler_temperature_setpoint", LP_RW|LP_MOT, 1, "double")
+  _limapar_addconfig(ccdname, "sensor_temperature_setpoint", LP_RW|LP_MOT, 1, "double")
 
-  _limapar_addconfig(ccdname, "gate_level", LP_RW|LP_LIST, 1)
-  _limapar_addconfig(ccdname, "gate_mode", LP_RW|LP_LIST, 1)
-  _limapar_addconfig(ccdname, "ready_level", LP_RW|LP_LIST, 1)
-  _limapar_addconfig(ccdname, "ready_mode", LP_RW|LP_LIST, 1)
-  _limapar_addconfig(ccdname, "trigger_level", LP_RW|LP_LIST, 1)
-  _limapar_addconfig(ccdname, "shutter_level", LP_RW|LP_LIST, 1)
+  _limapar_addconfig(ccdname, "frame_trigger_signal_type", LP_RW|LP_LIST, 1)
+  _limapar_addconfig(ccdname, "sequence_gate_signal_type", LP_RW|LP_LIST, 1)
+  _limapar_addconfig(ccdname, "output1_signal_type", LP_RW|LP_LIST, 1)
+  _limapar_addconfig(ccdname, "output2_signal_type", LP_RW|LP_LIST, 1)
+  _limapar_addconfig(ccdname, "output1_id", LP_RW|LP_LIST, 1)
+  _limapar_addconfig(ccdname, "output2_id", LP_RW|LP_LIST, 1)
+  _limapar_addconfig(ccdname, "electronic_shutter_enabled", LP_RW|LP_LIST, 1)
 
   # --- callback macro on parameter set
   _limapar_addconfig_cb(ccdname, "_limarayonixhs_setpar")
 
   # --- parameter description
-  _limapar_addtext(ccdname, "config_name", "Configuration File")
-  _limapar_addtext(ccdname, "config_path", "Configuration Path")
+  _limapar_addtext(ccdname, "frame_mode", "Frame Mode")
 
-  _limapar_addtext(ccdname, "fill_mode", "Pixel Gap Filling Mode")
+  _limapar_addtext(ccdname, "cooler", "Cooler controller")
+  _limapar_addtext(ccdname, "vacuum_valve", "Vacuum valve")
+  _limapar_addtext(ccdname, "sensor_temperature", "Detector sensor temperature")
+  _limapar_addtext(ccdname, "cooler_temperature_setpoint", "Cooler temperature setpoint")
+  _limapar_addtext(ccdname, "sensor_temperature_setpoint", "Sensor temperature setpoint")
 
-  _limapar_addtext(ccdname, "threshold", "Raw Threshold")
-  _limapar_addtext(ccdname, "energy_threshold", "Energy Threshold")
-  _limapar_addtext(ccdname, "threshold_noise", "Per chip threshold noise")
-  _limapar_addtext(ccdname, "energy_calibration", "Energy Calibration (threshold at E=0.)")
-
-  _limapar_addtext(ccdname, "gate_mode", "Gate Input Mode")
-  _limapar_addtext(ccdname, "gate_level", "Gate Input Level")
-  _limapar_addtext(ccdname, "trigger_level", "Trigger Input Level")
-  _limapar_addtext(ccdname, "shutter_level", "Shutter Output Level")
-  _limapar_addtext(ccdname, "ready_mode", "Ready Output Mode")
-  _limapar_addtext(ccdname, "ready_level", "Ready Output Level")
+  _limapar_addtext(ccdname, "frame_trigger_signal_type", "Frame trigger (input #1) signal type")
+  _limapar_addtext(ccdname, "sequence_gate_signal_type", "Sequence gate (input #2) signal type")
+  _limapar_addtext(ccdname, "output1_signal_type", "Output #1 signal type")
+  _limapar_addtext(ccdname, "output2_signal_type", "Output #2 signal type")
+  _limapar_addtext(ccdname, "output1_id", "Output #1 source identifier")
+  _limapar_addtext(ccdname, "output2_id", "Output #2 source identifier")
+  _limapar_addtext(ccdname, "electronic_shutter_enabled", "Electronic shutter enabled")
 }'
 
 lima_addlimatype("RayonixHs", "limarayonixhssetup", "limarayonixhsmenu")
 
 def _limarayonixhs_setpar(ccdname, parname, value) '{
-  if (parname == "config_name") {
+  if (parname == "frame_mode") {
    #need to inform SPEC about possible image type change
    local unit
    unit  = LIMA_DEV[ccdname]["unit"]
@@ -72,17 +71,19 @@ def limarayonixhsmenu(ccdname) '{
   local items[] parname
   local nl option
 
-  items["config_name"]= ""
-  items["config_path"]= ""
-  items["fill_mode"]= ""
-  items["threshold"]= -1
-  items["energy_threshold"]= -1
-  items["gate_mode"]= ""
-  items["gate_level"]= ""
-  items["trigger_level"]= ""
-  items["shutter_level"]= ""
-  items["ready_mode"]= ""
-  items["ready_level"]= ""
+  items["frame_mode"]= ""
+  items["cooler"]= ""
+  items["vacuum_valve"]= ""
+  items["sensor_temperature"]= -1
+  items["cooler_temperature_setpoint"]= -1
+  items["sensor_temperature_setpoint"]= -1
+  items["frame_trigger_signal_type"]= ""
+  items["sequence_gate_signal_type"]= ""
+  items["output1_signal_type"]= ""
+  items["output2_signal_type"]= ""
+  items["output1_id"]= ""
+  items["output2_id"]= ""
+  items["electronic_shutter_enabled"]= ""
 
   option= 1
 
@@ -94,55 +95,59 @@ def limarayonixhsmenu(ccdname) '{
 
     nl= _limamenu_printtitle(ccdname, "Configuration", "config")
 
-    tty_move(0, nl++, "(1) Configuration :")
-    _limamenu_printitem(ccdname, "config_name", items["config_name"], nl++, 11)
-    _limamenu_printitem(ccdname, "config_path", items["config_path"], nl++, 12)
-    _limamenu_printitem(ccdname, "fill_mode", items["fill_mode"], nl++, 13)
+    tty_move(0, nl++, "(1) Acquisition :")
+    _limamenu_printitem(ccdname, "frame_mode", items["frame_mode"], nl++, 11)
     nl++
 
-    tty_move(0, nl++, "(2) Calibration :")
-    _limamenu_printitem(ccdname, "threshold", items["threshold"], nl++, 21)
-    _limamenu_printitem(ccdname, "energy_threshold", items["energy_threshold"], nl++, 22)
+    tty_move(0, nl++, "(2) Cooling control :")
+    tty_move(25, nl++, sprintf(" Detector @  \[md\]%d\[me\] C", items["sensor_temperature"]))
+    _limamenu_printitem(ccdname, "cooler", items["cooler"], nl++, 21)
+    _limamenu_printitem(ccdname, "vacuum_valve", items["vacuum_valve"], nl++, 22)
+    _limamenu_printitem(ccdname, "cooler_temperature_setpoint", items["cooler_temperature_setpoint"], nl++, 23)
+    _limamenu_printitem(ccdname, "sensor_temperature_setpoint", items["sensor_temperature_setpoint"], nl++, 24)
     nl++
 
     tty_move(0, nl++, "(3) Input/Output Signals :")
-    _limamenu_printitem(ccdname, "gate_mode", items["gate_mode"], nl++, 31)
-    _limamenu_printitem(ccdname, "gate_level", items["gate_level"], nl++, 32)
-    _limamenu_printitem(ccdname, "trigger_level", items["trigger_level"], nl++, 33)
-    _limamenu_printitem(ccdname, "shutter_level", items["shutter_level"], nl++, 34)
-    _limamenu_printitem(ccdname, "ready_mode", items["ready_mode"], nl++, 35)
-    _limamenu_printitem(ccdname, "ready_level", items["ready_level"], nl++, 36)
+    _limamenu_printitem(ccdname, "frame_trigger_signal_type", items["frame_trigger_signal_type"], nl++, 31)
+    _limamenu_printitem(ccdname, "sequence_gate_signal_type", items["sequence_gate_signal_type"], nl++, 32)
+    _limamenu_printitem(ccdname, "output1_signal_type", items["output1_signal_type"], nl++, 33)
+    _limamenu_printitem(ccdname, "output2_signal_type", items["output2_signal_type"], nl++, 34)
+    _limamenu_printitem(ccdname, "output1_id", items["output1_id"], nl++, 35)
+    _limamenu_printitem(ccdname, "output2_id", items["output2_id"], nl++, 36)
+    _limamenu_printitem(ccdname, "electronic_shutter_enabled", items["electronic_shutter_enabled"], nl++, 37)
 
     option= getval("\n\n\tOption ---> ", 0)
     printf("\n\n")
 
     if ((option==1)||(option==11))
-      _limapar_ask(ccdname, "config_name", items["config_name"])
-    if ((option==1)||(option==12))
-      _limapar_ask(ccdname, "config_path", items["config_path"])
-    if ((option==1)||(option==13))
-      _limapar_ask(ccdname, "fill_mode", items["fill_mode"])
+      _limapar_ask(ccdname, "frame_mode", items["frame_mode"])
 
     if ((option==2)||(option==21))
-      _limapar_ask(ccdname, "threshold", items["threshold"])
+      _limapar_ask(ccdname, "cooler", items["cooler"])
     if ((option==2)||(option==22)) 
-      _limapar_ask(ccdname, "energy_threshold", items["energy_threshold"])
+      _limapar_ask(ccdname, "vacuum_valve", items["vacuum_valve"])
+    if ((option==2)||(option==23)) 
+      _limapar_ask(ccdname, "cooler_temperature_setpoint", items["cooler_temperature_setpoint"])
+    if ((option==2)||(option==24)) 
+      _limapar_ask(ccdname, "sensor_temperature_setpoint", items["sensor_temperature_setpoint"])
 
     if ((option==3)||(option==31)) 
-      _limapar_ask(ccdname, "gate_mode", items["gate_mode"])
+      _limapar_ask(ccdname, "frame_trigger_signal_type", items["frame_trigger_signal_type"])
     if ((option==3)||(option==32)) 
-      _limapar_ask(ccdname, "gate_level", items["gate_level"])
+      _limapar_ask(ccdname, "sequence_gate_signal_type", items["sequence_gate_signal_type"])
     if ((option==3)||(option==33)) 
-      _limapar_ask(ccdname, "trigger_level", items["trigger_level"])
+      _limapar_ask(ccdname, "output1_signal_type", items["output1_signal_type"])
     if ((option==3)||(option==34)) 
-      _limapar_ask(ccdname, "shutter_level", items["shutter_level"])
+      _limapar_ask(ccdname, "output2_signal_type", items["output2_signal_type"])
     if ((option==3)||(option==35)) 
-      _limapar_ask(ccdname, "ready_mode", items["ready_mode"])
+      _limapar_ask(ccdname, "output1_id", items["output1_id"])
     if ((option==3)||(option==36)) 
-      _limapar_ask(ccdname, "ready_level", items["ready_level"])
+      _limapar_ask(ccdname, "output2_id", items["output2_id"])
+    if ((option==3)||(option==37)) 
+      _limapar_ask(ccdname, "electronic_shutter_enabled", items["electronic_shutter_enabled"])
   }
 }'
 #%MACROS%
 #%IMACROS%
 #%TOC%
-#%AUTHOR% L.Claustre, Date: 26/03/2014
+#%AUTHOR% L.Claustre, Date: 16/04/2014

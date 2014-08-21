@@ -29,6 +29,8 @@ def limarayonixhssetup(ccdname) '{
   _limapar_addconfig(ccdname, "output2_id", LP_RW|LP_LIST, 1)
   _limapar_addconfig(ccdname, "electronic_shutter_enabled", LP_RW|LP_LIST, 1)
 
+ _limapar_addconfig(ccdname, "new_background_needed", LP_READ|LP_LIST, 1)
+
   # --- callback macro on parameter set
   _limapar_addconfig_cb(ccdname, "_limarayonixhs_setpar")
 
@@ -48,6 +50,8 @@ def limarayonixhssetup(ccdname) '{
   _limapar_addtext(ccdname, "output1_id", "Output #1 source identifier")
   _limapar_addtext(ccdname, "output2_id", "Output #2 source identifier")
   _limapar_addtext(ccdname, "electronic_shutter_enabled", "Electronic shutter enabled")
+  _limapar_addtext(ccdname, "new_background_needed", "Is a new background needed")
+
 }'
 
 lima_addlimatype("RayonixHs", "limarayonixhssetup", "limarayonixhsmenu")
@@ -84,6 +88,7 @@ def limarayonixhsmenu(ccdname) '{
   items["output1_id"]= ""
   items["output2_id"]= ""
   items["electronic_shutter_enabled"]= ""
+  items["new_background_needed"]= ""
 
   option= 1
 
@@ -95,11 +100,13 @@ def limarayonixhsmenu(ccdname) '{
 
     nl= _limamenu_printtitle(ccdname, "Configuration", "config")
 
-    tty_move(0, nl++, "(1) Acquisition :")
-    _limamenu_printitem(ccdname, "frame_mode", items["frame_mode"], nl++, 11)
+    tty_move(0, nl, "(1) Acquisition :")
+    tty_move(25, nl++, sprintf(" New background is needed? --> \[md\]%s\[me\] ", items["new_background_needed"]))
+    tty_move(5, nl++, "(11) Acquire New Background(s)")
+    _limamenu_printitem(ccdname, "frame_mode", items["frame_mode"], nl++, 12)
     nl++
 
-    tty_move(0, nl++, "(2) Cooling control :")
+    tty_move(0, nl, "(2) Cooling control :")
     tty_move(25, nl++, sprintf(" Detector @  \[md\]%d\[me\] C", items["sensor_temperature"]))
     _limamenu_printitem(ccdname, "cooler", items["cooler"], nl++, 21)
     _limamenu_printitem(ccdname, "vacuum_valve", items["vacuum_valve"], nl++, 22)
@@ -119,8 +126,15 @@ def limarayonixhsmenu(ccdname) '{
     option= getval("\n\n\tOption ---> ", 0)
     printf("\n\n")
 
-    if ((option==1)||(option==11))
+    if ((option==1)||(option==11)) {
+      local params[]
+      params[0]=0; params[1]=1
+      params[1] = getval("How many background images do you want to acquired",1)
+      tango_io(LIMA_DEV[ccdname]["config"], "acquireNewBackground",params)
+    }
+    if ((option==1)||(option==12))
       _limapar_ask(ccdname, "frame_mode", items["frame_mode"])
+
 
     if ((option==2)||(option==21))
       _limapar_ask(ccdname, "cooler", items["cooler"])
@@ -150,4 +164,4 @@ def limarayonixhsmenu(ccdname) '{
 #%MACROS%
 #%IMACROS%
 #%TOC%
-#%AUTHOR% L.Claustre, Date: 16/04/2014
+#%AUTHOR% L.Claustre, Date: 10/07/2014

@@ -206,6 +206,8 @@ def _limaroi_rename(oldmne, newmne) '{
 	_limaroi_remove(oldmne)
 }'
 
+
+
 #%IU%
 #%MDESC% 
 # sum counts over ROI into corresponding spec counter.
@@ -215,28 +217,41 @@ def _limaroi_getcounts '{
 	local xi xa yi ya
   local val npix
 
+
   for (iroi= 1; iroi<=list_n(LIMA_ROI); iroi++) {
     roimne= list_item(LIMA_ROI, iroi)
     roinum= cnt_num(roimne)
     ccdname= LIMA_ROI[roimne]["ccdname"]
     ccdunit= LIMA_DEV[ccdname]["unit"]
     if ((CCD_ON[ccdunit])&&(roinum!=-1)&&(counter_par(roinum, "disable")!=1)) {
-      arrname= sprintf("image_data%d", ccdunit)
-      roitype= LIMA_ROI[roimne]["type"] 
-      xi= LIMA_ROI[roimne]["xmin"]
-      xa= LIMA_ROI[roimne]["xmax"]
-      yi= LIMA_ROI[roimne]["ymin"]
-      ya= LIMA_ROI[roimne]["ymax"]
-      val= array_op("sum", @arrname[yi:ya][xi:xa])
-      if (roitype>0) {
-          npix= array_op("rows", @arrname)*array_op("cols", @arrname)
-          if (npix!=0) val= val / npix
-      }
-      if (roitype==2) {
-          val= array_op("sumsq", @arrname - val)
-          if (npix!=0) val= val / npix
-      }
-      S[roinum]= val
+
+      _limaroi_server_initarr(ccdname,1)
+      roitype= LIMA_ROI[roimne]["type"]	
+      if ( _limaroi_server_read(ccdname, 0) == -1) {
+        # spec 
+        arrname= sprintf("image_data%d", ccdunit)        
+        xi= LIMA_ROI[roimne]["xmin"]
+        xa= LIMA_ROI[roimne]["xmax"]
+        yi= LIMA_ROI[roimne]["ymin"]
+        ya= LIMA_ROI[roimne]["ymax"]
+        val= array_op("sum", @arrname[yi:ya][xi:xa])
+        if (roitype>0) {
+            npix= array_op("rows", @arrname)*array_op("cols", @arrname)
+            if (npix!=0) val= val / npix
+        }
+        if (roitype==2) {
+            val= array_op("sumsq", @arrname - val)
+            if (npix!=0) val= val / npix
+        }
+        S[roinum]= val
+      } else {
+        # server 
+        # in scan only one frame taken, so ROICNT_<ccdname>_<roimne>
+        # has one entry
+        local roiarr
+        roiarr= sprintf("ROICNT_%s_%s", ccdname, roimne)
+        S[roinum] = @roiarr[0][roitype]
+      } 
     }
   }
 }'
@@ -308,7 +323,7 @@ def _limaroi_menu(ccdname)'{
 			if (cmne) {
 				xmax= array_op("cols", @arrname)-1
 				ymax= array_op("rows", @arrname)-1
-        roitype= getval(" > Roi type [0=SUM, 1=AVG, 2=STD]", 0)
+        roitype= getval(" > Roi type [0=SUM, 1=AVG, 2=STD, 3=MIN, 4=MAX]", 0)
 				xmin= getval(" > X min  ", 0)
 				xmax= getval(" > X max  ", xmax)
 				ymin= getval(" > Y min  ", 0)
@@ -319,7 +334,7 @@ def _limaroi_menu(ccdname)'{
 		else if (key=="m"||key=="M") {
 			cmne= getval(" > Counter mnemonic       ", 0)
 			if (list_check(LIMA_ROI, cmne)>0) {
-        roitype= getval(" > Roi type [0=SUM, 1=AVG, 2=STD]", LIMA_ROI[cmne]["type"])
+        roitype= getval(" > Roi type [0=SUM, 1=AVG, 2=STD, 3=MIN, 4=MAX]", LIMA_ROI[cmne]["type"])
 				xmin= getval(" > X min          ", LIMA_ROI[cmne]["xmin"])
 				xmax= getval(" > X max          ", LIMA_ROI[cmne]["xmax"])
 				ymin= getval(" > Y min          ", LIMA_ROI[cmne]["ymin"])
@@ -371,6 +386,10 @@ def _limaroi_show(ccdname) '{
          roitype= "AVG"
       } else if (LIMA_ROI[roimne]["type"]==2) {
          roitype= "STD"
+      } else if (LIMA_ROI[roimne]["type"]==3) {
+         roitype= "MIN"
+      } else if (LIMA_ROI[roimne]["type"]==4) {
+         roitype= "MAX"
       }
 		  xmin= LIMA_ROI[roimne]["xmin"]
 		  xmax= LIMA_ROI[roimne]["xmax"]
@@ -557,7 +576,12 @@ def _limaroi_server_send(ccdname) '{
     }
   }
 
-  tango_io(srv,"add",sendroi,roi_id)
+  # Dangerous if server has multiple clients for rois
+  # but we are in spec !!
+  tango_io(srv, "clearAllRois")
+  
+  # send the updated list of rois
+  tango_io(srv,"addNames",sendroi,roi_id)
 
   if (nroi) {
     local long array argroi[5*nroi]
@@ -585,7 +609,7 @@ def _limaroi_server_send(ccdname) '{
     if (state!=0) {
       tango_io(srv, "Start")
     }
-    tango_io(srv, "setRoi", argroi)
+    tango_io(srv, "setRois", argroi)
   }
 
   return (nroi)

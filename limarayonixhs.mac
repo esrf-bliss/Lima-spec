@@ -31,6 +31,8 @@ def limarayonixhssetup(ccdname) '{
 
  _limapar_addconfig(ccdname, "new_background_needed", LP_READ|LP_LIST, 1)
 
+  _limapar_addconfig(ccdname, "readout_mode", LP_RW|LP_LIST, 1)
+
   # --- callback macro on parameter set
   _limapar_addconfig_cb(ccdname, "_limarayonixhs_setpar")
 
@@ -51,6 +53,7 @@ def limarayonixhssetup(ccdname) '{
   _limapar_addtext(ccdname, "output2_id", "Output #2 source identifier")
   _limapar_addtext(ccdname, "electronic_shutter_enabled", "Electronic shutter enabled")
   _limapar_addtext(ccdname, "new_background_needed", "Is a new background needed")
+  _limapar_addtext(ccdname, "readout_mode", "Readout mode")
 
 }'
 
@@ -89,6 +92,7 @@ def limarayonixhsmenu(ccdname) '{
   items["output2_id"]= ""
   items["electronic_shutter_enabled"]= ""
   items["new_background_needed"]= ""
+  items["readout_mode"]= ""
 
   option= 1
 
@@ -104,6 +108,7 @@ def limarayonixhsmenu(ccdname) '{
     tty_move(25, nl++, sprintf(" New background is needed? --> \[md\]%s\[me\] ", items["new_background_needed"]))
     tty_move(5, nl++, "(11) Acquire New Background(s)")
     _limamenu_printitem(ccdname, "frame_mode", items["frame_mode"], nl++, 12)
+    _limamenu_printitem(ccdname, "readout_mode", items["readout_mode"], nl++, 13)
     nl++
 
     tty_move(0, nl, "(2) Cooling control :")
@@ -134,6 +139,8 @@ def limarayonixhsmenu(ccdname) '{
     }
     if ((option==1)||(option==12))
       _limapar_ask(ccdname, "frame_mode", items["frame_mode"])
+    if ((option==1)||(option==13))
+      _limapar_ask(ccdname, "readout_mode", items["readout_mode"])
 
 
     if ((option==2)||(option==21))

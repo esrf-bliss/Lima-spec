@@ -160,6 +160,7 @@ def _limatake_cleanup '{
     if (LIMATAKE[iccd]["trigger"] != -1) {
       _limapar_set(ccdname, "acq_trigger_mode", LIMATAKE[iccd]["trigger"])
     }
+    _limapar_set(ccdname, "acq_nb_frames", 1)
   }
 }'
 

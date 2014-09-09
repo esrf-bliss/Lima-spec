@@ -650,8 +650,10 @@ def _limacontrol_post_createarray(ccdunit) '{
   if ((nroi[0] == 0) && (nroi[1] == 0) && \
       (nroi[2] >= image_par(ccdunit, "cols")) && \
       (nroi[3] >= image_par(ccdunit, "rows"))) {
-    nroi[2] = image_par(ccdunit, "cols")
-    nroi[3] = image_par(ccdunit, "rows")
+    # nroi[2] = image_par(ccdunit, "cols")
+    # nroi[3] = image_par(ccdunit, "rows")
+    nroi[2] = 0
+    nroi[3] = 0
   }
   _limapar_set(ccdname, "image_roi", nroi, -1)
 }'
@@ -727,10 +729,12 @@ if (!(whatis("_limapar_config_callback")&2))   rdef _limapar_config_callback ""
 # Call the callback macro depending on parameter <devtype> (control or config)
 #
 def _limapar_set_callback(devtype, ccdname, parname, value) '{
-  if (devtype=="control")
+  if (devtype=="control") {
     _limapar_control_callback
-  if (devtype=="config")
+  }
+  if (devtype=="config") {
     _limapar_config_callback
+  }
   return (0)
 }'
 

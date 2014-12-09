@@ -886,6 +886,9 @@ def _limapar_get(ccdname, parname, paridx) '{
   }
 }'
 
+cdef("_limapar_set_pre_hook","\n;if(\$\#){};\n","_limacore_")
+cdef("_limapar_set_post_hook","\n;if(\$\#){};\n","_limacore_")
+
 #%IU% (ccdname, parname, value, paridx)
 def _limapar_set(ccdname, parname, value, paridx) '{
   local devname arrname parsize partype hascb setval
@@ -894,6 +897,8 @@ def _limapar_set(ccdname, parname, value, paridx) '{
   devname= _limapar_getdevname(ccdname, parname)
   parsize= @arrname[parname]["size"]
   partype= @arrname[parname]["type"]
+
+   _limapar_set_pre_hook
  
   if (!(@arrname[parname]["property"]&LP_WRITE)) {
     _lima_error ccdname; printf("<%s> is read-only\n", parname)
@@ -929,6 +934,8 @@ def _limapar_set(ccdname, parname, value, paridx) '{
       }
     }
   }
+
+   _limapar_set_post_hook
 
   return 1
 }'

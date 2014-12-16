@@ -26,10 +26,7 @@ def limampxsetup(ccdname) '{
 
   _limapar_addconfig(ccdname, "fill_mode", LP_RW|LP_LIST, 1)
 
-  _limapar_addconfig(ccdname, "threshold", LP_RW|LP_MOT, 1)
-  _limapar_addconfig(ccdname, "energy_threshold", LP_RW|LP_MOT, 1)
-  _limapar_addconfig(ccdname, "threshold_noise", LP_RW|LP_MOT, 5, "long")
-  _limapar_addconfig(ccdname, "energy_calibration", LP_RW|LP_MOT, 5, "double")
+  _limapar_addconfig(ccdname, "energy_threshold", LP_RW|LP_MOT, 1, "double")
 
   _limapar_addconfig(ccdname, "gate_level", LP_RW|LP_LIST, 1)
   _limapar_addconfig(ccdname, "gate_mode", LP_RW|LP_LIST, 1)
@@ -47,10 +44,7 @@ def limampxsetup(ccdname) '{
 
   _limapar_addtext(ccdname, "fill_mode", "Pixel Gap Filling Mode")
 
-  _limapar_addtext(ccdname, "threshold", "Raw Threshold")
-  _limapar_addtext(ccdname, "energy_threshold", "Energy Threshold")
-  _limapar_addtext(ccdname, "threshold_noise", "Per chip threshold noise")
-  _limapar_addtext(ccdname, "energy_calibration", "Energy Calibration (threshold at E=0.)")
+  _limapar_addtext(ccdname, "energy_threshold", "Energy Threshold (KeV)")
 
   _limapar_addtext(ccdname, "gate_mode", "Gate Input Mode")
   _limapar_addtext(ccdname, "gate_level", "Gate Input Level")
@@ -84,7 +78,6 @@ def limampxmenu(ccdname) '{
   items["config_name"]= ""
   items["config_path"]= ""
   items["fill_mode"]= ""
-  items["threshold"]= -1
   items["energy_threshold"]= -1
   items["gate_mode"]= ""
   items["gate_level"]= ""
@@ -110,8 +103,7 @@ def limampxmenu(ccdname) '{
     nl++
 
     tty_move(0, nl++, "(2) Calibration :")
-    _limamenu_printitem(ccdname, "threshold", items["threshold"], nl++, 21)
-    _limamenu_printitem(ccdname, "energy_threshold", items["energy_threshold"], nl++, 22)
+    _limamenu_printitem(ccdname, "energy_threshold", items["energy_threshold"], nl++, 21)
     nl++
 
     tty_move(0, nl++, "(3) Input/Output Signals :")
@@ -133,8 +125,6 @@ def limampxmenu(ccdname) '{
       _limapar_ask(ccdname, "fill_mode", items["fill_mode"])
 
     if ((option==2)||(option==21))
-      _limapar_ask(ccdname, "threshold", items["threshold"])
-    if ((option==2)||(option==22)) 
       _limapar_ask(ccdname, "energy_threshold", items["energy_threshold"])
 
     if ((option==3)||(option==31)) 

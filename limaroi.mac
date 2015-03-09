@@ -27,6 +27,7 @@
 #
 def _limaroi_init() '{
   global LIMA_ROI[]
+  global LIMA_ROI_ID[]
   if (list_n(LIMA_ROI)<0)
     list_init LIMA_ROI
 	cdef("user_getcounts", "_limaroi_getcounts\n", "limaroi", 0x10)
@@ -59,7 +60,7 @@ def _limaroi_add(ccdname, roimne, roitype, xmin, xmax, ymin, ymax) '{
 		list_add(LIMA_ROI, roimne)
 
 	LIMA_ROI[roimne]["ccdname"]= ccdname
-  LIMA_ROI[roimne]["type"]= roitype
+   	LIMA_ROI[roimne]["type"]= roitype
 	LIMA_ROI[roimne]["xmin"]= xmin
 	LIMA_ROI[roimne]["xmax"]= xmax
 	LIMA_ROI[roimne]["ymin"]= ymin
@@ -582,6 +583,11 @@ def _limaroi_server_send(ccdname) '{
   
   # send the updated list of rois
   tango_io(srv,"addNames",sendroi,roi_id)
+ 
+  # update rois with roi_id returned by the server
+  for (iroi=1; iroi<=nroi; iroi++) {
+      list_setpar(LIMA_ROI, iroi,"roi_id", roi_id[iroi-1])
+  }
 
   if (nroi) {
     local long array argroi[5*nroi]
@@ -599,11 +605,10 @@ def _limaroi_server_send(ccdname) '{
       argroi[5*iroi + 3]= fabs(xmax-xmin)+1
       argroi[5*iroi + 4]= fabs(ymax-ymin)+1
 
+      # save a reversed list to get roimne from roi_id, 
+      # LIMA_ROI is a list to get roi_id from roimne
       LIMA_ROI_SRV[ccdname][roi_id[iroi]]= roimne
     }
-    LIMA_ROI_SRV[ccdname]["nroi"]= nroi
-    # TODO 
-    #LIMA_ROI_SRV[ccdname]["roi_id"]
 
     state= tango_get(srv, "State")
     if (state!=0) {
@@ -611,6 +616,7 @@ def _limaroi_server_send(ccdname) '{
     }
     tango_io(srv, "setRois", argroi)
   }
+  LIMA_ROI_SRV[ccdname]["nroi"]= nroi
 
   return (nroi)
 }'
@@ -629,8 +635,8 @@ def _limaroi_server_initarr(ccdname, maxpt) '{
 
   nroi= LIMA_ROI_SRV[ccdname]["nroi"]
   if (nroi) {
-    for (iroi=0; iroi<nroi; iroi++) {
-      roiarr= sprintf("ROICNT_%s_%s", ccdname, LIMA_ROI_SRV[ccdname][iroi])
+    for (iroi=1; iroi<=nroi; iroi++) {
+      roiarr= sprintf("ROICNT_%s_%s", ccdname, list_item(LIMA_ROI,iroi)
       double array @roiarr[maxpt][5]
       @roiarr[:][:]= 0.
     }

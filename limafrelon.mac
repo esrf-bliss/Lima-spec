@@ -20,6 +20,8 @@ def limafrelonsetup(ccdname) '{
   _limapar_addconfig(ccdname, "roi_bin_offset",LP_RW,1,"long")
   _limapar_addconfig(ccdname, "e2v_correction",LP_RW|LP_LIST,1)
   _limapar_addconfig(ccdname, "spb2_config",LP_RW|LP_LIST,1)
+  _limapar_addconfig(ccdname, "readout_time",LP_READ,1)
+  _limapar_addconfig(ccdname, "transfer_time",LP_READ,1)
 
   # --- callback macro on parameter set
   _limapar_addconfig_cb(ccdname, "_limafrelon_setpar")
@@ -28,10 +30,12 @@ def limafrelonsetup(ccdname) '{
   _limapar_addtext(ccdname, "espia_dev_nb", "Espia board number")
   _limapar_addtext(ccdname, "image_mode", "Image mode")
   _limapar_addtext(ccdname, "input_channel", "Input channel(s)")
-  _limapar_addtext(channel, "roi_mode","Roi mode")
-  _limapar_addtext(channel, "roi_bin_offset","Roi bin offset")
-  _limapar_addtext(channel, "e2v_correction","Correction E2V")
-  _limapar_addtext(channel, "spb2_config","SPB2 read mode")
+  _limapar_addtext(ccdname, "roi_mode","Roi mode")
+  _limapar_addtext(ccdname, "roi_bin_offset","Roi bin offset")
+  _limapar_addtext(ccdname, "e2v_correction","Correction E2V")
+  _limapar_addtext(ccdname, "spb2_config","SPB2 read mode")
+  _limapar_addtext(ccdname, "readout_time","Camera readout time (sec)")
+  _limapar_addtext(ccdname, "transfer_time","Camera transfer time (sec)")
 }'
 
 lima_addlimatype("Frelon", "limafrelonsetup", "limafrelonmenu")

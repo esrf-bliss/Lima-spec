@@ -529,8 +529,6 @@ def _limapar_controlinit(ccdname, version) '{
 
   # --- image
   _limapar_addcontrol(ccdname, "image_type", LP_READ, 1)
-  # _limapar_addcontrol(ccdname, "image_width", LP_READ, 1)
-  # _limapar_addcontrol(ccdname, "image_height", LP_READ, 1)
   _limapar_addcontrol(ccdname, "image_sizes", LP_READ, 4, "ulong")
   _limapar_addcontrol(ccdname, "image_bin", LP_RW, 2, "ulong")
   _limapar_addcontrol(ccdname, "image_flip", LP_RW, 2, "ushort")
@@ -538,9 +536,7 @@ def _limapar_controlinit(ccdname, version) '{
   _limapar_addcontrol(ccdname, "image_roi", LP_RW, 4, "ulong")
 
   _limapar_addtext(ccdname, "image_type", "Image lima data type")
-  # _limapar_addtext(ccdname, "image_width", "Width of image")
-  # _limapar_addtext(ccdname, "image_height", "Height of image")
-  _limapar_addtext(ccdname, "image_sizes", "Image size [Depth, X, Y]")
+  _limapar_addtext(ccdname, "image_sizes", "Image size [Signed, Depth, X, Y]")
   _limapar_addtext(ccdname, "image_bin", "Image binning [X,Y]")
   _limapar_addtext(ccdname, "image_flip", "Image flipping [X,Y]")
   _limapar_addtext(ccdname, "image_rotation", "Image rotation")

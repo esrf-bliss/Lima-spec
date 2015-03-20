@@ -21,16 +21,25 @@
 #
 
 
-#%IU% ()
+#%IU%
 #%MDESC%
 # Initialise associative array %B%LIMA_ROI%B% and create user_getcounts cdef
+#%BR% Automatically called from %B%limasetup%B%
 #
-def _limaroi_init() '{
+def limaroisetup '{
   global LIMA_ROI[]
-  global LIMA_ROI_ID[]
-  if (list_n(LIMA_ROI)<0)
-    list_init LIMA_ROI
+  list_test LIMA_ROI
 	cdef("user_getcounts", "_limaroi_getcounts\n", "limaroi", 0x10)
+}'
+
+#%IU%
+#%MDESC%
+# Cleanup cdef and associative arrays used in limaroi 
+#
+def limaroiunsetup '{
+  cdef("", "", "limaroi", "delete")
+  _limaroi_reset()
+  unglobal LIMA_ROI LIMA_ROI_SRV
 }'
 
 def user_limaroi_add '#$*'
@@ -54,19 +63,17 @@ def limaroiadd '{
 #
 def _limaroi_add(ccdname, roimne, roitype, xmin, xmax, ymin, ymax) '{
 
-  _limaroi_init()
-   
 	if (list_item(LIMA_ROI, roimne)==-1) 
 		list_add(LIMA_ROI, roimne)
 
 	LIMA_ROI[roimne]["ccdname"]= ccdname
-   	LIMA_ROI[roimne]["type"]= roitype
+  LIMA_ROI[roimne]["type"]= roitype
 	LIMA_ROI[roimne]["xmin"]= xmin
 	LIMA_ROI[roimne]["xmax"]= xmax
 	LIMA_ROI[roimne]["ymin"]= ymin
 	LIMA_ROI[roimne]["ymax"]= ymax
 
-  _limaroi_server_update(ccdname)
+  _limaroi_server_send(ccdname)
   user_limaroi_add ccdname roimne
 }'
 
@@ -103,11 +110,8 @@ def _limaroi_remove(roimne) '{
   if ((roinum= cnt_num(roimne))!=-1) {
     S[roinum]= 0
   }
-  _limaroi_server_update(ccdname)
+  _limaroi_server_remove(ccdname, roimne)
   user_limaroi_remove ccdname roimne
-  if (list_n(LIMA_ROI)<1) {
-    cdef("", "", "limaroi", "delete")
-  }
 }'
 
 #%UU% <ccdname>
@@ -119,7 +123,7 @@ def limaroireset '{
   local ccdname
   if ($#!=1) {
     print "Usage: $0 <ccdname>"
-    print "  If <ccdname>=="*", remove rois for all ccds"
+    print "  If <ccdname>==\"*\", remove rois for all ccds"
     exit
   }
   ccdname= "$1"
@@ -139,7 +143,7 @@ def _limaroi_reset(ccdname) '{
   local iroi roimne roinum roiccd
   local delroi[] nroi
 
-  if (ccdname=="*") {
+  if ((!ccdname)||(ccdname=="*")) {
     for (iroi=1; iroi<=list_n(LIMA_ROI); iroi++) {
       roimne= list_item(LIMA_ROI, iroi)
       if ((roinum=cnt_num(roimne)) != -1) {
@@ -148,34 +152,59 @@ def _limaroi_reset(ccdname) '{
       roiccd= LIMA_ROI[roimne]["ccdname"]
       if (roiccd!=ccdname) {
         ccdname= roiccd
-        _limaroi_server_update(ccdname)
+        _limaroi_server_reset(ccdname)
       }
       user_limaroi_remove roiccd roimne
     }
     list_init LIMA_ROI
   } else {
-     nroi= 0
-     for (iroi=1; iroi<=list_n(LIMA_ROI); iroi++) {
-      roimne= list_item(LIMA_ROI, iroi)
-      if (LIMA_ROI[roimne]["ccdname"]==ccdname) {
-        delroi[nroi++]= roimne
-        if ((roinum=cnt_num(roimne)) != -1) {
-          S[roinum]= 0
-        }
-      }
-    }
+    nroi= _limaroi_getrois(ccdname, delroi)
     for (iroi=0; iroi<nroi; iroi++) {
+      if ((roinum=cnt_num(delroi[iroi])) != -1) {
+        S[roinum]= 0
+      }
       list_remove(LIMA_ROI, delroi[iroi])
       user_limaroi_remove ccdname delroi[iroi]
     }
-    if (nroi) {
-      _limaroi_server_update(ccdname)
-    }
-  }
-  if (list_n(LIMA_ROI)<1) {
-    cdef("", "", "limaroi", "delete")
+    _limaroi_server_reset(ccdname)
   }
 }'
+
+#%IU% (ccdname, rois)
+#%MDESC%
+# Return the number of rois and their mnemonic in input rois array
+#
+def _limaroi_getrois(ccdname, rois) '{
+  local iroi roimne nroi
+  nroi= 0
+  for (iroi=1; iroi<=list_n(LIMA_ROI); iroi++) {
+    roimne= list_item(LIMA_ROI, iroi)
+    if (LIMA_ROI[roimne]["ccdname"]==ccdname) {
+       rois[nroi++]= roimne
+    }
+  }
+  return (nroi)
+}'
+
+#%IU% (ccdname, rois)
+#%MDESC%
+# Return the number of configured and enabled rois and their mnemonic in input rois array
+#
+def _limaroi_getroiactive(ccdname, rois) '{
+  local iroi roimne roinum nroi
+  nroi= 0
+  for (iroi=1; iroi<=list_n(LIMA_ROI); iroi++) {
+    roimne= list_item(LIMA_ROI, iroi)
+    if (LIMA_ROI[roimne]["ccdname"]==ccdname) {
+      roinum= cnt_num(roimne)
+      if ((roinum!=-1)&&(counter_par(roinum, "disable")!=1)) {
+        rois[nroi++]= roimne
+      }
+    }
+  }
+  return (nroi)
+}'
+      
 
 #%UU% <old_mne> <new_mne>
 #%MDESC%
@@ -208,51 +237,33 @@ def _limaroi_rename(oldmne, newmne) '{
 }'
 
 
-
 #%IU%
 #%MDESC% 
-# sum counts over ROI into corresponding spec counter.
+# Read roicounter debice values and put then into corresponding spec counter.
 def _limaroi_getcounts '{
-	local iroi roimne roinum
-  local ccdname ccdunit arrname
-	local xi xa yi ya
-  local val npix
+  local iccd ccdname ccdunit
+  local nroi iroi rois[]
+  local roimne roinum roiarr roitype
 
-
-  for (iroi= 1; iroi<=list_n(LIMA_ROI); iroi++) {
-    roimne= list_item(LIMA_ROI, iroi)
-    roinum= cnt_num(roimne)
-    ccdname= LIMA_ROI[roimne]["ccdname"]
+  for (iccd= 1; iccd<=list_n(LIMA_DEV); iccd++) {
+    ccdname= list_item(LIMA_DEV, iccd)
     ccdunit= LIMA_DEV[ccdname]["unit"]
-    if ((CCD_ON[ccdunit])&&(roinum!=-1)&&(counter_par(roinum, "disable")!=1)) {
 
-      _limaroi_server_initarr(ccdname,1)
-      roitype= LIMA_ROI[roimne]["type"]	
-      if ( _limaroi_server_read(ccdname, 0) == -1) {
-        # spec 
-        arrname= sprintf("image_data%d", ccdunit)        
-        xi= LIMA_ROI[roimne]["xmin"]
-        xa= LIMA_ROI[roimne]["xmax"]
-        yi= LIMA_ROI[roimne]["ymin"]
-        ya= LIMA_ROI[roimne]["ymax"]
-        val= array_op("sum", @arrname[yi:ya][xi:xa])
-        if (roitype>0) {
-            npix= array_op("rows", @arrname)*array_op("cols", @arrname)
-            if (npix!=0) val= val / npix
+    if (CCD_ON[ccdunit] && LIMA_DEV[ccdname]["roicounter"]) {
+      # --- check if we need to read some rois
+      nroi= _limaroi_getroiactive(ccdname, rois)
+      if (nroi>0) {
+        _limaroi_server_initarr(ccdname, 1)
+        _limaroi_server_read(ccdname, 0)
+
+        for (iroi= 0; iroi<nroi; iroi++) {
+          roimne= rois[iroi]
+          roinum= cnt_num(roimne)
+          roiarr= sprintf("ROICNT_%s_%s", ccdname, roimne)
+          roitype= LIMA_ROI[roimne]["type"]
+          S[roinum]= @roiarr[0][roitype]
         }
-        if (roitype==2) {
-            val= array_op("sumsq", @arrname - val)
-            if (npix!=0) val= val / npix
-        }
-        S[roinum]= val
-      } else {
-        # server 
-        # in scan only one frame taken, so ROICNT_<ccdname>_<roimne>
-        # has one entry
-        local roiarr
-        roiarr= sprintf("ROICNT_%s_%s", ccdname, roimne)
-        S[roinum] = @roiarr[0][roitype]
-      } 
+      }
     }
   }
 }'
@@ -262,7 +273,7 @@ def _limaroi_getcounts '{
 # Show a menu allowing all modification on ROIs settings
 #
 def limaroi '{
-  local ccdname
+  local ccdname idev
 
   ccdname= ($#==1) ? "$1" : 0
   if (ccdname) {
@@ -371,8 +382,6 @@ def _limaroi_menu(ccdname)'{
 def _limaroi_show(ccdname) '{
   local iroi nb roimne
 	local cmne roitype xmin xmax ymin ymax status
-
-  _limaroi_init()
 
 	clscreen()
 	tty_move(10,0,sprintf("\[md\]< LIMA ROI on %s >\[me\]", ccdname))
@@ -523,73 +532,59 @@ def _limaroi_load(ccdname, filename) '{
 
 # -----------------------------------------------------------------------------
 
-def limaroiserver '{
-  global LIMA_ROI_SRV[]
-  local ccdname roisrv
-
-  if (list_n(LIMA_ROI_SRV)<0)
-    list_init LIMA_ROI_SRV
-
-  if ($# != 2) {
-    print "Usage: $0 <ccdname> <roicounter_device>"
-    exit
-  }
-
-  ccdname= "$1"
-  roisrv= "$2"
-
-  if (list_check(LIMA_DEV, ccdname)<=0) {
-    _lima_error ; printf("Unknown LIMA CCD <%s>\n", ccdname)
-  } else {
-    list_add(LIMA_ROI_SRV, ccdname)
-    LIMA_ROI_SRV[ccdname]["device"]= roisrv
-    LIMA_ROI_SRV[ccdname]["nroi"]= 0
-    _limaroi_server_send(ccdname)
-  }
-}'
-
-def _limaroi_server_update(ccdname) '{
-  if (_limaroi_server_defined(ccdname))
-    _limaroi_server_send(ccdname)
-}'
-
 def _limaroi_server_defined(ccdname) '{
-  if (list_getpar(LIMA_ROI_SRV, ccdname, "device")!=-1)
-    return (1)
-  else
-    return (0)
+  return (LIMA_DEV[ccdname]["roicounter"]!=0)
 }'
 
+#%IU%
+#%MDESC%
+# Return name of roicounter device if it exits.
+#%BR% If not, return 0 and print an error message
+#
+def _limaroi_server_getds(ccdname) '{
+  local roisrv
+  roisrv= list_getpar(LIMA_DEV, ccdname, "roicounter")
+  if (!roisrv) {
+    _lima_error ccdname ; printf("No ROI counter device configured !!")
+    return (0)
+  }
+  return (roisrv)
+}'
+
+#%IU%
+#%MDESC%
+# Reset roi on the server
+#
+def _limaroi_server_reset(ccdname) '{
+  local roisrv
+  roisrv= _limaroi_server_getds(ccdname)
+  if (roisrv) {
+    tango_io(roisrv, "Stop")
+    tango_io(roisrv, "clearAllRois")
+  }
+}'
+
+#%IU%
+#%MDESC%
+# Send all rois config to the server
+#
 def _limaroi_server_send(ccdname) '{
+  global LIMA_ROI_SRV[]  
+
+  local state srv
   local nroi iroi roimne sendroi[] roi_id[]
   local xmin xmax ymin ymax
-  local state srv
 
-  srv= list_getpar(LIMA_ROI_SRV, ccdname, "device")
-  if (srv==-1)
+  srv= _limaroi_server_getds(ccdname)
+  if (!srv)
     return (-1)
 
-  nroi= 0
-  for (iroi=1; iroi<=list_n(LIMA_ROI); iroi++) {
-    roimne= list_item(LIMA_ROI, iroi)
-    if (LIMA_ROI[roimne]["ccdname"]==ccdname) {
-      sendroi[nroi++]= roimne
-    }
-  }
-
-  # Dangerous if server has multiple clients for rois
-  # but we are in spec !!
-  tango_io(srv, "clearAllRois")
-  
-  # send the updated list of rois
-  tango_io(srv,"addNames",sendroi,roi_id)
- 
-  # update rois with roi_id returned by the server
-  for (iroi=1; iroi<=nroi; iroi++) {
-      list_setpar(LIMA_ROI, iroi,"roi_id", roi_id[iroi-1])
-  }
-
+  nroi= _limaroi_getrois(ccdname, sendroi)
   if (nroi) {
+    # send the updated list of rois
+    tango_io(srv,"addNames",sendroi,roi_id)
+
+    # prepare arg array for server 
     local long array argroi[5*nroi]
 
     for (iroi=0; iroi<nroi; iroi++) {
@@ -605,8 +600,9 @@ def _limaroi_server_send(ccdname) '{
       argroi[5*iroi + 3]= fabs(xmax-xmin)+1
       argroi[5*iroi + 4]= fabs(ymax-ymin)+1
 
-      # save a reversed list to get roimne from roi_id, 
-      # LIMA_ROI is a list to get roi_id from roimne
+      # save roi ID in roi params array
+      LIMA_ROI[roimne]["roi_id"]= roi_id[iroi]
+      # save a reversed list to get roimne from roi id
       LIMA_ROI_SRV[ccdname][roi_id[iroi]]= roimne
     }
 
@@ -621,22 +617,31 @@ def _limaroi_server_send(ccdname) '{
   return (nroi)
 }'
 
-def _limaroi_server_reset(ccdname) '{
-  local srv
-  srv= list_item(LIMA_ROI_SRV, ccdname, "device")
-  if (srv!=-1) {
-    tango_io(srv, "Stop")
-    LIMA_ROI_SRV[ccdname]["nroi"]= 0
-  }
+#%IU%
+#%MDESC%
+# Remove one roi from server
+#
+def _limaroi_server_remove(ccdname, roimne) '{
+  local srv delrois[]
+  srv= _limaroi_server_getds(ccdname)
+  if (!srv)
+    return (-1)
+
+  delrois[0]= roimne
+  tango_io(srv, "removeRois", delrois)
 }'
 
+#%IU%
+#%MDESC%
+# Initialise array for reading roi values from server
+#
 def _limaroi_server_initarr(ccdname, maxpt) '{
   local iroi roiarr nroi
 
   nroi= LIMA_ROI_SRV[ccdname]["nroi"]
   if (nroi) {
     for (iroi=1; iroi<=nroi; iroi++) {
-      roiarr= sprintf("ROICNT_%s_%s", ccdname, list_item(LIMA_ROI,iroi)
+      roiarr= sprintf("ROICNT_%s_%s", ccdname, list_item(LIMA_ROI,iroi))
       double array @roiarr[maxpt][5]
       @roiarr[:][:]= 0.
     }
@@ -647,52 +652,53 @@ def _limaroi_server_initarr(ccdname, maxpt) '{
   return (nroi)
 }'
 
+#%IU%
+#%MDESC%
+# Read roi counter values from server
+#
 def _limaroi_server_read(ccdname, frompt) '{
-  local nroi rois[] iroi 
-  local readarr roiarr offset
-  local iframe nframe lastpt lastrd
-  local srv frame_num niter
-
-  srv= list_getpar(LIMA_ROI_SRV, ccdname, "device")
-  if (srv==-1)
-    return (-1)
+  local nroi srv
+  local lastpt readarr readnb lastrd
+  local idx roi_id frame_id roiarr
 
   nroi= LIMA_ROI_SRV[ccdname]["nroi"]
-  if (nroi) {
-    lastpt= tango_get(srv, "CounterStatus")
-    if (lastpt >= frompt) {
-      readarr= sprintf("ROICNT_READ_%s", ccdname)
-      elnb = tango_io(srv, "readCounters", (frompt==-1?0:frompt), @readarr)
+  if (!nroi)
+    return (0)
 
-      # new command returns rois as a list of roi result for each frame by roi:
-      # e.g for 2 rois and 3 frames:
-      #result[0]  --> roi id 0
-      #result[1] --> frame 0 (or frompt)
-      #result[2:6] --> sum/avg/std/min/max
-      #result[7] --> roi id 0
-      #result[8[ --> frame 1 (or frompt+1)
-      #result[9:13] --> sum/avg/std/min/max
-      #resut[14] --> roi id 0
-      #result[15] --> frame 2
-      #result[16:20] --> sum/avg/std/min/max
-      #resut[21] --> roi id 1
-      #result[22] --> frame 0      
-      #....
-      
-      # 7 values for each frame (roi_id/frame_nb/sum/avg/std/min/max) times nroi
-      niter = elnb/7
-      nframe= elnb/7/nroi
-      lastrd = frompt  
-      for(i = 0;i < elnb;i += 7)
-      {
-         local roi_id frame_id sum avg std minVal maxVal
-	 roi_id = @readarr[i]
-	 frame_id = @readarr[i + 1]
-         if(frame_id > lastrd)
-	    lastrd = frame_id 
-	 roiarr= sprintf("ROICNT_%s_%s", ccdname, LIMA_ROI_SRV[ccdname][roi_id])
-	 @roiarr[frame_id][0:4] = @readarr[i+2:i+6]
-      }
+  srv= _limaroi_server_getds(ccdname)
+  if (!srv)
+    return (-1)
+
+  lastpt= tango_get(srv, "CounterStatus")
+  if (lastpt >= frompt) {
+    readarr= sprintf("ROICNT_READ_%s", ccdname)
+    readnb= tango_io(srv, "readCounters", (frompt==-1?0:frompt), @readarr)
+
+    # new command returns rois as a list of roi result for each frame by roi:
+    # e.g for 2 rois and 3 frames:
+    #result[0]  --> roi id 0
+    #result[1] --> frame 0 (or frompt)
+    #result[2:6] --> sum/avg/std/min/max
+    #result[7] --> roi id 0
+    #result[8[ --> frame 1 (or frompt+1)
+    #result[9:13] --> sum/avg/std/min/max
+    #resut[14] --> roi id 0
+    #result[15] --> frame 2
+    #result[16:20] --> sum/avg/std/min/max
+    #resut[21] --> roi id 1
+    #result[22] --> frame 0      
+    #....
+    
+    # 7 values for each frame (roi_id/frame_nb/sum/avg/std/min/max) times nroi
+    lastrd= frompt  
+
+    for (idx= 0; idx<readnb; idx+=7) {
+	    roi_id= @readarr[idx]
+	    frame_id= @readarr[idx+1]
+      if (frame_id > lastrd)
+	      lastrd = frame_id
+	    roiarr= sprintf("ROICNT_%s_%s", ccdname, LIMA_ROI_SRV[ccdname][roi_id])
+	    @roiarr[frame_id][0:4] = @readarr[idx+2:idx+6]
     }
     lastrd= (lastrd > 0) ? lastrd : 0
     return (lastrd)

@@ -23,8 +23,8 @@
 # %BR% Then, one setup macro has to be called for each LIMA CCD: %B%limaccdsetup%B% .
 # %BR% Example:
 # %BR% > limasetup
-# %BR% > limaccdsetup my_mpx 0 idxx/limaccd/mpx1 idxx/limamaxipix/mpx1
-# %BR% > limaccdsetup my_plt 1 idxx/limaccd/plt1 idxx/limapilatus/plt1 %BR%
+# %BR% > limaccdsetup my_mpx 0 idxx/limaccd/mpx1 
+# %BR% > limaccdsetup my_plt 1 idxx/limaccd/plt1 %BR%
 # %BR% The ccdname (here my_mpx or my_plt) will be used in all macros to 
 # reference one specific CCD if several CCDs are configured.
 #
@@ -71,6 +71,8 @@ def _lima_tango_error '{
 def limasetup '{
   global LIMA_DEV[]
   list_test LIMA_DEV
+
+  limaroisetup
 
   # --- hook to ccd.mac setup menu
   cdef("_user_ccd_private_menu", "_limamenu_ccdprivate\n", "lima")
@@ -141,18 +143,17 @@ def lima_addlimatype(limatype, setup_macro, menu_macro) '{
   }
 }'
  
-#%UU% <ccdname> <ccd_unit> <control_device> <config_device>
+#%UU% <ccdname> <ccd_unit> <control_device>
 #%MDESC%
 # Has to be called for each LIMA CCD you want to configure
 # %BR% %B%ccd_name%B% : user name to refer to your CCD in all macros
 # %BR% %B%ccd_unit%B% : ccd unit from spec config
 # %BR% %B%control_device%B% : lima control tango device (generic)
-# %BR% %B%config_device%B% : lima configuration tango device (specific for each ccd type)
 #
 def limaccdsetup '{
-  local ccdname limatype arrname
-  if ($# != 4) {
-    print "Usage: $0 <ccd_name> <ccd_unit> <control_device> <config_device>"
+  local ccdname limatype limacfg
+  if ($# < 3) {
+    print "Usage: $0 <ccd_name> <ccd_unit> <control_device>"
     exit
   }
 
@@ -160,29 +161,30 @@ def limaccdsetup '{
   list_add(LIMA_DEV, ccdname)
   LIMA_DEV[ccdname]["unit"]= int($2)
   LIMA_DEV[ccdname]["control"]= "$3"
-  LIMA_DEV[ccdname]["config"]= "$4"
 
   _lima_initconfig(ccdname)
 
   limatype= _limapar_get(ccdname, "lima_type")
-  if (limatype<=0) {
-    _lima_error ccdname ; printf("Cannot get lima type\n")
+  limacfg= tango_io(LIMA_DEV[ccdname]["control"], "getPluginDeviceNameFromType", limatype)
+  if ((limatype<=0)||(limacfg=="")) {
+    _lima_error ccdname ; printf("Cannot get lima config type or device\n")
   } else {
     LIMA_DEV[ccdname]["type"]= limatype
+    LIMA_DEV[ccdname]["config"]= limacfg
+    LIMA_DEV[ccdname]["roicounter"]= tango_io(LIMA_DEV[ccdname]["control"], \
+                                     "getPluginDeviceNameFromType", "roicounter")
+
     if (!_lima_inittypeconfig(ccdname)) {
       _lima_error ccdname ; printf("No setup macro for ccd type <%s>\n", limatype)
     } else {
-      arrname= LIMA_DEV[ccdname]["arrname"]
-      if (list_check(@arrname, "camera_type")>0) {
-        LIMA_DEV[ccdname]["camera_type"]= _limapar_get(ccdname, "camera_type")
-      } else {
-        LIMA_DEV[ccdname]["camera_type"]= LIMA_DEV[ccdname]["type"]
-      }
-      if (list_check(@arrname, "camera_model")>0) {
-        LIMA_DEV[ccdname]["camera_model"]= _limapar_get(ccdname, "camera_model")
-      } else {
-        LIMA_DEV[ccdname]["camera_model"]= "Unknown"
-      }
+      LIMA_DEV[ccdname]["camera_type"]= _limapar_get(ccdname, "camera_type")
+      LIMA_DEV[ccdname]["camera_model"]= _limapar_get(ccdname, "camera_model")
+    }
+
+    if (LIMA_DEV[ccdname]["roicounter"]=="") {
+      LIMA_DEV[ccdname]["roicounter"]= 0
+    } else {
+      _limaroi_server_send(ccdname)
     }
   }
 
@@ -590,7 +592,7 @@ def _limapar_controlinit(ccdname, version) '{
   _limapar_addcontrol(ccdname, "saving_next_number", LP_RW, 1)
   _limapar_addcontrol(ccdname, "saving_overwrite_policy", LP_RW|LP_LIST, 1)
   _limapar_addcontrol(ccdname, "saving_header_delimiter", LP_RW, 3)
-  _limapar_addcontrol(ccdname, "saving_common_header", LP_RW, 1)
+  _limapar_addcontrol(ccdname, "saving_common_header", LP_RW, 65535)
 
   _limapar_addtext(ccdname, "saving_mode", "Saving mode")
   _limapar_addtext(ccdname, "saving_format", "Saving file format")
@@ -632,6 +634,8 @@ def _limacontrol_post_createarray(ccdunit) '{
   local ccdname nbin[] nroi[]
 
   ccdname = _lima_getccdname(ccdunit)
+  if (!ccdname)
+    return 0
   if (LIMA_DEV[ccdname]["in_resize"])
     return 0
 

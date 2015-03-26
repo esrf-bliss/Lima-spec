@@ -558,10 +558,6 @@ def _limaroi_server_getds(ccdname) '{
 def _limaroi_server_reset(ccdname) '{
   local roisrv
   roisrv= _limaroi_server_getds(ccdname)
-  if (roisrv) {
-    tango_io(roisrv, "Stop")
-    tango_io(roisrv, "clearAllRois")
-  }
 }'
 
 #%IU%

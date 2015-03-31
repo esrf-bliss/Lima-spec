@@ -23,6 +23,7 @@ def limaandor3setup(ccdname) '{
   _limapar_addconfig(ccdname, "fan_speed",LP_RW|LP_LIST,1)
   _limapar_addconfig(ccdname, "electronic_shutter_mode",LP_RW|LP_LIST,1)
   _limapar_addconfig(ccdname, "destride_active",LP_RW|LP_LIST,1)
+  _limapar_addconfig(ccdname, "frame_rate",LP_READ,1)
   
   
 
@@ -36,6 +37,7 @@ def limaandor3setup(ccdname) '{
   _limapar_addtext(ccdname, "fan_speed", "Fan speed")
   _limapar_addtext(ccdname, "electronic_shutter_mode", "Electronic shutter mode")
   _limapar_addtext(ccdname, "destride_active", "Destride reconstruction activate")
+  _limapar_addtext(ccdname, "frame_rate", "Frame rate on last acquisition")
 
 
 }'

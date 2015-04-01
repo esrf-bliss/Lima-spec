@@ -38,7 +38,7 @@ def limaroisetup '{
 #
 def limaroiunsetup '{
   cdef("", "", "limaroi", "delete")
-  _limaroi_reset()
+  _limaroi_removeall()
   unglobal LIMA_ROI LIMA_ROI_SRV
 }'
 
@@ -116,14 +116,55 @@ def _limaroi_remove(roimne) '{
 
 #%UU% <ccdname>
 #%MDESC%
-# Remove all ROIs for CCD <ccdname>
-#%BR% If <ccdname> == %B%*%B%, remove all ROIs for all CCDs
+#  Remove all ROIs for CCD <ccdname>
+#%BR% if <ccdname> == %B%*%B%, remove all ROIs for all CCDs
+#
+def limaroiremoveall '{
+  local ccdname
+  if ($#!=1) {
+    print "Usage: $0 <ccdname>"
+    print "  If <ccdname>==\"*\", remove rois on all ccds"
+    exit
+  }
+  ccdname= "$1"
+  if ((ccdname != "*")&&(list_check(LIMA_DEV, ccdname)<=0)) {
+    _lima_error ; printf("Unknown LIMA CCD <%s>\n", ccdname)
+  } else {
+    _limaroi_removeall(ccdname)
+  }
+}'
+
+#%IU%
+#%MDESC%
+def _limaroi_removeall(ccdname) '{
+  local iroi roimne nroi delroi[]
+
+  if ((!ccdname)||(ccdname=="*")) {
+    for (iroi=1; iroi<=list_n(LIMA_ROI); iroi++) {
+      roimne= list_item(LIMA_ROI, iroi)
+      _limaroi_remove(roimne)
+    }
+  } else {
+    nroi= _limaroi_getrois(ccdname, delroi)
+    for (iroi=0; iroi<nroi; iroi++) {
+      roimne= delroi[iroi]
+      _limaroi_remove(roimne)
+    }
+  }
+}'
+
+#%UU% <ccdname>
+#%MDESC%
+# Remove all ROIs for CCD <ccdname> and resets ALL ROIs on roicounter device
+#%BR% If <ccdname> == %B%*%B%, apply to all CCDs
+#%BR% %B%Warning%B% : resets also ROIs on roicounter device which has not been
+# necessary set by limaroi macros.
 #
 def limaroireset '{
   local ccdname
   if ($#!=1) {
     print "Usage: $0 <ccdname>"
-    print "  If <ccdname>==\"*\", remove rois for all ccds"
+    print "  If <ccdname>==\"*\", resets rois on all ccds"
     exit
   }
   ccdname= "$1"
@@ -144,28 +185,13 @@ def _limaroi_reset(ccdname) '{
   local delroi[] nroi
 
   if ((!ccdname)||(ccdname=="*")) {
-    for (iroi=1; iroi<=list_n(LIMA_ROI); iroi++) {
-      roimne= list_item(LIMA_ROI, iroi)
-      if ((roinum=cnt_num(roimne)) != -1) {
-        S[roinum]= 0
-      }
-      roiccd= LIMA_ROI[roimne]["ccdname"]
-      if (roiccd!=ccdname) {
-        ccdname= roiccd
-        _limaroi_server_reset(ccdname)
-      }
-      user_limaroi_remove roiccd roimne
+    nccd= _limaroi_getccds(ccds)
+    for (iccd=0; iccd<nccd; iccd++) {
+      _limaroi_removeall(ccds[iccd])
+      _limaroi_server_reset(ccds[iccd])
     }
-    list_init LIMA_ROI
   } else {
-    nroi= _limaroi_getrois(ccdname, delroi)
-    for (iroi=0; iroi<nroi; iroi++) {
-      if ((roinum=cnt_num(delroi[iroi])) != -1) {
-        S[roinum]= 0
-      }
-      list_remove(LIMA_ROI, delroi[iroi])
-      user_limaroi_remove ccdname delroi[iroi]
-    }
+    _limaroi_removeall(ccdname)
     _limaroi_server_reset(ccdname)
   }
 }'
@@ -186,6 +212,29 @@ def _limaroi_getrois(ccdname, rois) '{
   return (nroi)
 }'
 
+#%IU%
+#%MDESC%
+# Return the number of CCDs and their names in input ass. array
+# on which ROIs has been configured
+#
+def _limaroi_getccds(ccds) '{
+  local iroi roimne ccdname nccd found
+  nccd= 0
+  for (iroi=1; iroi<=list_n(LIMA_ROI); iroi++) {
+    roimne= list_item(LIMA_ROI, iroi)
+    ccdname= LIMA_ROI[roimne]["ccdname"]
+    found= 0
+    for (iccd=0; iccd<nccd; iccd++) {
+      if (ccds[iccd]==ccdname) {
+        found= 1
+      }
+    }
+    if (!found) {
+      ccds[nccd++]= ccdname
+    }
+  }
+  return (nccd)
+}'
 #%IU% (ccdname, rois)
 #%MDESC%
 # Return the number of configured and enabled rois and their mnemonic in input rois array
@@ -325,7 +374,7 @@ def _limaroi_menu(ccdname)'{
 			cmne= getval("Counter mnemonic",0)
 			if (cmne!="0") {
         if (cmne=="*")
-          _limaroi_reset(ccdname)
+          _limaroi_removeall(ccdname)
         else
           _limaroi_remove(cmne)
       }
@@ -512,7 +561,7 @@ def _limaroi_load(ccdname, filename) '{
   if (!file_info(file, "-e")) {
     _lima_error ccdname ; printf("Cannot find file <%s>\n", file)
   } else {
-    _limaroi_reset(ccdname)
+    _limaroi_removeall(ccdname)
     nroi= 0
 
     for (line= getline(file); line!=-1; line=getline(file)) {
@@ -558,6 +607,10 @@ def _limaroi_server_getds(ccdname) '{
 def _limaroi_server_reset(ccdname) '{
   local roisrv
   roisrv= _limaroi_server_getds(ccdname)
+  if (roisrv) {
+    tango_io(roisrv, "Stop")
+    tango_io(roisrv, "clearAllRois")
+  }
 }'
 
 #%IU%

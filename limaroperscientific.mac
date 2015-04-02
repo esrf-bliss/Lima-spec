@@ -1,0 +1,62 @@
+#%NAME% 
+#  Specific macros for Lima RoperScientific (Princeton) detector 
+#%CATEGORY% Detection, Ccd
+
+#%LOG%
+#
+#$Revision: $
+#
+
+def limaroperscientificsetup(ccdname) '{
+
+  # --- common control init
+  _limapar_controlinit(ccdname, 0)
+
+  # --- parameter definition
+  _limapar_addconfig(ccdname, "temperaturesetpoint", LP_RW|LP_MOT, 1)
+  _limapar_addconfig(ccdname, "temperature", LP_READ, 1)
+  _limapar_addconfig(ccdname, "gain", LP_RW|LP_MOT, 1)
+
+  # --- parameter description
+  _limapar_addtext(ccdname, "temperaturesetpoint", "Temperature set-point")
+  _limapar_addtext(ccdname, "temperature", "Sensor Temperature")
+  _limapar_addtext(ccdname, "gain", "ADC Gain")
+
+}'
+
+lima_addlimatype("RoperScientific", "limaroperscientificsetup", "limaroperscientificmenu")
+
+
+def limaroperscientificmenu(ccdname) '{
+  local items[] parname
+  local nl option
+
+  items["temperaturesetpoint"] = -1
+  items["temperature"] = -1
+  items["gain"] = -1
+  option= 1
+  while (option) {
+    
+    for (parname in items) {
+      items[parname]= _limapar_get(ccdname, parname)
+    }
+    nl = _limamenu_printtitle(ccdname, "Configuration", "config")
+    tty_move(25, nl++, sprintf(" Sensor @  \[md\]%d\[me\] C", items["temperature"]))
+    _limamenu_printitem(ccdname, "temperaturesetpoint", items["temperaturesetpoint"], nl++,1)
+    nl++
+    _limamenu_printitem(ccdname, "ADC Gain", items["gain"], nl++,2)
+
+    option= getval("\n\n\tOption ---> ", 0)
+    printf("\n\n")
+
+    if(option==1)
+      _limapar_ask(ccdname, "temperaturesetpoint",items["temperaturesetpoint"])
+    if(option==2)
+      _limapar_ask(ccdname, "gain",items["gain"])
+  }
+
+}'
+#%MACROS%
+#%IMACROS%
+#%TOC%
+#%AUTHOR% L.Claustre, $Revision: $, $Date: $

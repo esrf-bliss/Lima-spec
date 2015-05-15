@@ -1110,6 +1110,7 @@ def _limamenu_printitem(ccdname, parname, value, nl, option) '{
 jtdo ("lima/limatools")
 jtdo ("lima/limaacq")
 jtdo ("lima/limaroi")
+jtdo ("lima/limaprocess")
 
 #%MACROS%
 #%IMACROS%

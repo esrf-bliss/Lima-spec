@@ -1,0 +1,234 @@
+#%TITLE% limacorr.mac
+#%NAME% LIMA CCD CORRECTION
+#%DESCRIPTION%
+# Implements online image correction using the correction plugin devices mask, background and flatfield
+#
+#
+#%END%
+
+#%CATEGORY% Detection, Ccd
+
+
+global _LIMA_CCDNAME_
+global _LIMA_CORR_[]
+
+
+#%UU <ccdname> <mask filename>
+#%MDESC set a file for mask correction and activate the correction <BR>
+# Expected mask type is "standard" pixel @ 0  = 0, pixel @ 1 = value <BR>
+# Run level for mask is set to 0 (the first level for correction)
+#
+def lima_set_mask '{
+  local corr_file ctrl_device_name corr_device_name ccdname
+
+  if ($#!=2) {
+    print "Usage: lima_set_mask <ccdmne> <mask file name with full path and edf format>"
+    print "      e.g.: lima_set_mask mpx22 /users/opid10/maxipix/calib/mpx_mask_eh1.edf"
+    print "      The File must be available from the detector computer (e.g mpxid101)"
+    print ""
+    if ($#==0) 
+      ccdname = getval("Detector mne", _LIMA_CCDNAME_)
+    corr_file = getval("Mask filename", _LIMA_CORR_[ccdname]["mask"])
+  } else {
+    corr_file = "$2"
+    ccdname =  "$1"
+  }
+
+  if (list_check(LIMA_DEV, ccdname)<=0) {
+    _lima_error ; printf("<%s> is not a LIMA CCD\n", "$1")
+    exit
+  }
+  _LIMA_CCDNAME_ = ccdname
+  _LIMA_CORR_[ccdname]["mask"] = corr_file
+
+  ctrl_device_name = LIMA_DEV[ccdname]["control"]
+  corr_device_name = _lima_get_plugin_devicename(ccdname, "mask") 
+
+  tango_io(corr_device_name,"Stop")
+  tango_io(corr_device_name,"setMaskImage",corr_file)
+  tango_io(corr_device_name,"Start")
+  tango_put(corr_device_name,"type","standard")
+
+  print "Mask correction is ON for "ccdname
+}'
+
+#%UU <ccdname>
+#%MDESC  Stop the mask correction 
+#
+def lima_unset_mask '{
+  local corr_device_name
+  if (!$#) ccdname = getval("Detector name", _LIMA_CCDNAME_)
+  else
+    ccdname =  "$1"
+
+  if (list_check(LIMA_DEV, ccdname)<=0) {
+    _lima_error ; printf("<%s> is not a LIMA CCD\n", "$1")
+    exit
+  }
+  _LIMA_CCDNAME_ = ccdname
+
+  ctrl_device_name = LIMA_DEV[ccdname]["control"]
+  corr_device_name = _lima_get_plugin_devicename(ccdname, "mask")
+  tango_io(corr_device_name,"Stop")
+  print "Mask correction is OFF for "ccdname
+}'
+
+#%UU <ccdname> <flatfield filename>
+#%MDESC set a file for FlatField correction and activate the correction <BR>
+# Run level for Flatfield is set to 1 (after mask correction) <BR>
+# Normalization is disabled (supposed to be done in the the file)
+#
+def lima_set_flatfield '{
+  local corr_file ctrl_device_name corr_device_name ccdname
+
+  if ($#!=2) {
+    print "Usage: lima_set_flatfield <ccdname> <mask file name with full path and edf format>"
+    print "      e.g.: lima_set_flatfield mpx22 /users/opid10/maxipix/calib/mpx_mask_eh1.edf"
+    print "      flatfield file must be put on detector computer (e.g mpxid101)"
+    if ($#==0) 
+      ccdname = getval("Detector mne", _LIMA_CCDNAME_)
+      corr_file = getval("Flatfield filename", _LIMA_CORR_[ccdname]["ff"])
+  } else {
+    corr_file = "$2"
+    ccdname =  "$1"
+  }
+  
+  if (list_check(LIMA_DEV, ccdname)<=0) {
+    _lima_error ; printf("<%s> is not a LIMA CCD\n", "$1")
+    exit
+  }
+  _LIMA_CCDNAME_ = ccdname
+  _LIMA_CORR_[ccdname]["ff"] = corr_file
+
+  ctrl_device_name = LIMA_DEV[ccdname]["control"]
+  corr_device_name = _lima_get_plugin_devicename(ccdname, "flatfield")
+
+  tango_io(corr_device_name,"Stop")
+  tango_io(corr_device_name,"setFlatFieldImage",ff_file)
+  tango_put(corr_device_name,"RunLevel",1)
+  tango_put(corr_device_name,"normalize",0)
+  
+  tango_io(corr_device_name,"Start")
+
+  print "FlatField correction is ON for "ccdname
+}'
+
+#%UU <ccdname>
+#%MDESC  Stop the flatfield correction
+#
+def lima_unset_flatfield '{
+  local corr_device_name
+  if (!$#) ccdname = getval("Detector name", _LIMA_CCDNAME_)
+  else
+    ccdname =  "$1"
+  if (list_check(LIMA_DEV, ccdname)<=0) {
+    _lima_error ; printf("<%s> is not a LIMA CCD\n", "$1")
+    exit
+  }
+  _LIMA_CCDNAME_ = ccdname
+
+  ctrl_device_name = LIMA_DEV[ccdname]["control"]
+  corr_device_name = _lima_get_plugin_devicename(ccdname, "flatfield")
+  tango_io(corr_device_name,"Stop")
+  print "FlatField correction is OFF for "ccdname
+}'
+
+
+#%UU <ccdname> <background filename>
+#%MDESC set a file for background substraction correction and activate the correction <BR>
+# Run level for mask is set to 1 (the second level for correction)
+#
+def lima_set_background '{
+  local corr_file ctrl_device_name corr_device_name ccdname
+
+  if ($#!=2) {
+    print "Usage: lima_set_mask <ccdname> <background file name with full path and edf format>"
+    print "      e.g.: lima_set_mask mpx22 /users/opid10/maxipix/calib/mpx_dark_eh1.edf"
+    print "      mask file must be put on detector computer (e.g mpxid101)"
+    print ""
+    if ($#==0) 
+      ccdname = getval("Detector mne", _LIMA_CCDNAME_)
+      corr_file = getval("Background filename", _LIMA_CORR_[ccdname]["background"])
+  } else {
+      corr_file = "$2"
+      ccdname =  "$1"
+  }
+
+  if (list_check(LIMA_DEV, ccdname)<=0) {
+    _lima_error ; printf("<%s> is not a LIMA CCD\n", "$1")
+    exit
+  }
+  _LIMA_CCDNAME_ = ccdname
+  _LIMA_CORR_[ccdname]["background"] = corr_file
+
+  ctrl_device_name = LIMA_DEV[ccdname]["control"]
+  corr_device_name = _lima_get_plugin_devicename(ccdname, "backgroundsubstraction") 
+
+  tango_io(corr_device_name,"Stop")
+  tango_io(corr_device_name,"setBackgroundImage",corr_file)
+  tango_put(corr_device_name,"RunLevel",1)
+  tango_io(corr_device_name,"Start")
+
+  print "Background correction is ON for "ccdname
+}'
+
+#%UU <ccdname>
+#%MDESC  Stop the background correction 
+#
+def lima_unset_background '{
+  local corr_device_name
+  if (!$#) ccdname = getval("Detector name", _LIMA_CCDNAME_)
+  else
+    ccdname =  "$1"
+
+  if (list_check(LIMA_DEV, ccdname)<=0) {
+    _lima_error ; printf("<%s> is not a LIMA CCD\n", "$1")
+    exit
+  }
+  _LIMA_CCDNAME_ = ccdname
+
+  ctrl_device_name = LIMA_DEV[ccdname]["control"]
+  corr_device_name = _lima_get_plugin_devicename(ccdname, "backgroundsubstraction")
+  tango_io(corr_device_name,"Stop")
+  print "Background correction is OFF for "ccdname
+}'
+
+#%IU%
+#%
+def _lima_get_plugin_devicename(ccdname, type) '{
+  local ctrl_device_name plugin_device_name
+  local type_list[] _found
+
+  if (list_check(LIMA_DEV, ccdname)<=0) {
+    _lima_error ; printf("<%s> is not a LIMA CCD\n", ccdname)
+    exit
+  }
+  ctrl_device_name = LIMA_DEV[ccdname]["control"]
+  tango_get(ctrl_device_name,"plugin_type_list", type_list)
+  _found = 0
+  for (ind in type_list) {
+    if (type == type_list[ind]) _found =1
+  }
+  if (!_found) {
+    _lima_error; printf("<%s> has not plugin device for type <%s>\n", ccdname,type)
+    exit
+  }
+  plugin_device_name = tango_io(ctrl_device_name,"getPluginDeviceNameFromType", type)
+  return plugin_device_name
+}'
+
+
+#%UU% <ccd device number>
+#%DESC% return true if the ccd device is responsive and active in the config
+# (not OFF)
+def limaccdcheck(dev) '{
+  if (image_par(dev,"responsive") && image_par(dev,"device_id")!="?")
+    return 1
+  else return 0
+}'
+
+
+#%MACROS%
+#%IMACROS%
+#%TOC%
+#%AUTHOR% L.Claustre

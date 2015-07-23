@@ -618,10 +618,11 @@ def _limaroi_server_reset(ccdname) '{
 # Send all rois config to the server
 #
 def _limaroi_server_send(ccdname) '{
-  global LIMA_ROI_SRV[]  
+  global LIMA_ROI_SRV[]
 
   local state srv
   local nroi iroi roimne sendroi[] roi_id[]
+  local roi_srv[] nroi_srv
   local xmin xmax ymin ymax
 
   srv= _limaroi_server_getds(ccdname)
@@ -662,6 +663,9 @@ def _limaroi_server_send(ccdname) '{
     tango_io(srv, "setRois", argroi)
   }
   LIMA_ROI_SRV[ccdname]["nroi"]= nroi
+  # get the number of defined rois on the server
+  nroi_srv=tango_io(srv,"getNames",roi_srv)
+  LIMA_ROI_SRV[ccdname]["nroi_srv"]= nroi_srv
 
   return (nroi)
 }'
@@ -686,17 +690,33 @@ def _limaroi_server_remove(ccdname, roimne) '{
 #
 def _limaroi_server_initarr(ccdname, maxpt) '{
   local iroi roiarr nroi
+  local srv nroi_srv
 
+  # nroi is the number of actually used rois
   nroi= LIMA_ROI_SRV[ccdname]["nroi"]
+
+  # nroi_srv is the the number of rois defined on the server
+  srv = _limaroi_server_getds(ccdname)
+  nroi_srv=tango_io(srv,"getNames",roi_srv)
+  LIMA_ROI_SRV[ccdname]["nroi_srv"]= nroi_srv
+
+  if (nroi_srv<nroi) nroi_srv=nroi
   if (nroi) {
-    for (iroi=1; iroi<=nroi; iroi++) {
-      roiarr= sprintf("ROICNT_%s_%s", ccdname, list_item(LIMA_ROI,iroi))
-      double array @roiarr[maxpt][5]
-      @roiarr[:][:]= 0.
+    # LIMA_ROI is a list of ALL rois of ALL lima CCDs
+    for (iroi=1; iroi<=LIMA_ROI[0]; iroi++) {
+      local roi_mne
+      roi_mne = list_item(LIMA_ROI,iroi)
+      # Create roiarr only for a ROI of this detector
+      if ( list_getpar(LIMA_ROI,roi_mne,"ccdname") == ccdname ) {
+        roiarr= sprintf("ROICNT_%s_%s", ccdname, roi_mne)
+        double array @roiarr[maxpt][5]
+        @roiarr[:][:]= 0.
+      }
     }
     roiarr= sprintf("ROICNT_READ_%s", ccdname)
     # roi_id/frame_nb/sum/avg/std/min/max --> 7 values
-    double array @roiarr[1+(nroi*7*maxpt)]
+    # nroi_srv must be the number of rois on the server!
+    double array @roiarr[1+(nroi_srv*7*maxpt)]
   }
   return (nroi)
 }'
@@ -720,6 +740,7 @@ def _limaroi_server_read(ccdname, frompt) '{
 
   lastpt= tango_get(srv, "CounterStatus")
   if (lastpt >= frompt) {
+    local srvarr[]
     readarr= sprintf("ROICNT_READ_%s", ccdname)
     readnb= tango_io(srv, "readCounters", (frompt==-1?0:frompt), @readarr)
 
@@ -746,8 +767,10 @@ def _limaroi_server_read(ccdname, frompt) '{
 	    frame_id= @readarr[idx+1]
       if (frame_id > lastrd)
 	      lastrd = frame_id
+      if (LIMA_ROI_SRV[ccdname][roi_id]) {
 	    roiarr= sprintf("ROICNT_%s_%s", ccdname, LIMA_ROI_SRV[ccdname][roi_id])
 	    @roiarr[frame_id][0:4] = @readarr[idx+2:idx+6]
+      }
     }
     lastrd= (lastrd > 0) ? lastrd : 0
     return (lastrd)

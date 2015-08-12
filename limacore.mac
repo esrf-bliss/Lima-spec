@@ -519,6 +519,9 @@ def _limapar_controlinit(ccdname, version) '{
   _limapar_addcontrol(ccdname, "acc_dead_time", LP_READ|LP_CNT, 1)
   _limapar_addcontrol(ccdname, "acc_saturated_active", LP_RW, 1)
   _limapar_addcontrol(ccdname, "acc_saturated_threshold", LP_RW|LP_MOT, 1)
+  _limapar_addcontrol(ccdname, "acc_mode", LP_RW|LP_LIST, 1)
+  _limapar_addcontrol(ccdname, "acc_offset_before", LP_RW|LP_MOT, 1)
+  _limapar_addcontrol(ccdname, "acc_threshold_before", LP_RW|LP_MOT, 1)
 
   _limapar_addtext(ccdname, "acc_max_expo_time", "Accumulation Maximum exposure time/frame [sec]")
   _limapar_addtext(ccdname, "acc_nb_frames", "Accumulation number of frames")
@@ -528,6 +531,9 @@ def _limapar_controlinit(ccdname, version) '{
   _limapar_addtext(ccdname, "acc_dead_time", "Accumulation total dead time [sec]")
   _limapar_addtext(ccdname, "acc_saturated_active", "Activate accumulation saturation detection")
   _limapar_addtext(ccdname, "acc_saturated_threshold", "Accumulation saturation detection threshold")
+  _limapar_addtext(ccdname, "acc_mode", "Accumulation mode")
+  _limapar_addtext(ccdname, "acc_offset_before", "Offset correction before accumulation")
+  _limapar_addtext(ccdname, "acc__threshold_before", "Threshold correction before accumulation")
 
   # --- buffer management
   _limapar_addcontrol(ccdname, "buffer_max_memory", LP_RW, 1)

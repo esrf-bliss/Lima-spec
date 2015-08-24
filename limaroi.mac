@@ -629,6 +629,8 @@ def _limaroi_server_send(ccdname) '{
   if (!srv)
     return (-1)
 
+  # if server stopped, no yet roi
+  state= tango_get(srv, "State")
   nroi= _limaroi_getrois(ccdname, sendroi)
   if (nroi) {
     # send the updated list of rois
@@ -656,7 +658,6 @@ def _limaroi_server_send(ccdname) '{
       LIMA_ROI_SRV[ccdname][roi_id[iroi]]= roimne
     }
 
-    state= tango_get(srv, "State")
     if (state!=0) {
       tango_io(srv, "Start")
     }
@@ -664,9 +665,12 @@ def _limaroi_server_send(ccdname) '{
   }
   LIMA_ROI_SRV[ccdname]["nroi"]= nroi
   # get the number of defined rois on the server
-  nroi_srv=tango_io(srv,"getNames",roi_srv)
+  # If the server is not running there is no roi already
+  if (state) { 
+    nroi_srv=tango_io(srv,"getNames",roi_srv)
+  } else nroi_srv = 0
   LIMA_ROI_SRV[ccdname]["nroi_srv"]= nroi_srv
-
+  
   return (nroi)
 }'
 
@@ -697,6 +701,7 @@ def _limaroi_server_initarr(ccdname, maxpt) '{
 
   # nroi_srv is the the number of rois defined on the server
   srv = _limaroi_server_getds(ccdname)
+
   nroi_srv=tango_io(srv,"getNames",roi_srv)
   LIMA_ROI_SRV[ccdname]["nroi_srv"]= nroi_srv
 

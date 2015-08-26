@@ -666,7 +666,7 @@ def _limaroi_server_send(ccdname) '{
   LIMA_ROI_SRV[ccdname]["nroi"]= nroi
   # get the number of defined rois on the server
   # If the server is not running there is no roi already
-  if (state) { 
+  if (state==0) { 
     nroi_srv=tango_io(srv,"getNames",roi_srv)
   } else nroi_srv = 0
   LIMA_ROI_SRV[ccdname]["nroi_srv"]= nroi_srv

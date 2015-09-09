@@ -1,0 +1,39 @@
+#%NAME% 
+#  Specific macros for Lima pco detector 
+#%CATEGORY% Detection, Ccd
+
+#%LOG%
+#
+#$Revision: $
+#
+
+#=====================================================================
+#=====================================================================
+def limaprosilicasetup(ccdname) '{
+
+  # --- common control init
+  _limapar_controlinit(ccdname, 0)
+
+  # --- parameter definition & description
+
+}'
+
+#=====================================================================
+#=====================================================================
+lima_addlimatype("Prosilica", "limaprosilicasetup", "limaprosilicamenu")
+
+
+#=====================================================================
+#=====================================================================
+def limaprosilicamenu(ccdname) '{
+}'
+
+#=====================================================================
+#=====================================================================
+
+
+
+#%MACROS%
+#%IMACROS%
+#%TOC%
+#%AUTHOR% E.Petitdemange, $Revision: $, $Date: $

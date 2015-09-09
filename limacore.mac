@@ -616,6 +616,11 @@ def _limapar_controlinit(ccdname, version) '{
   _limapar_addtext(ccdname, "saving_header_delimiter", "Delimiter used in file headers")
   _limapar_addtext(ccdname, "saving_common_header", "Common header added to all files")
 
+  # --- video
+  _limapar_addcontrol(ccdname, "video_live", LP_RW|LP_LIST, 1)
+
+  _limapar_addtext(ccdname, "video_live", "Video Live")
+
   _limapar_addcontrol_cb(ccdname, "_limacontrol_setpar")
 
 }'

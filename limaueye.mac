@@ -1,0 +1,52 @@
+#%NAME% 
+#  Specific macros for Lima Ueye cam 
+#%CATEGORY% Detection, Ccd
+
+#%LOG%
+#
+#$Revision: $
+#
+
+def limaueyesetup(ccdname) '{
+
+  # --- common control init
+  _limapar_controlinit(ccdname, 0)
+
+  # --- parameter definition
+  #_limapar_addconfig(ccdname,"full_well_mode",LP_RW|LP_LIST,1)
+  # --- parameter description
+  #_limapar_addtext(ccdname, "full_well_mode", "Full well mode")
+}'
+
+lima_addlimatype("Ueye", "limaueyesetup", "limaueyemenu")
+
+
+def limaueyemenu(ccdname) '{
+  local items[] parname
+  local nl option
+
+  #items["full_well_mode"] = "HIGH"
+  option= 1
+  while(option) {
+      for(parname in items) {
+          items[parname]= _limapar_get(ccdname, parname)
+      }
+      nl= _limamenu_printtitle(ccdname, "Configuration", "config")
+
+      #tty_move(0, nl++, "(1) Configuration :")
+      #_limamenu_printitem(ccdname, "full_well_mode", items["full_well_mode"], nl++,11)
+
+      option= getval("\n\n\tOption ---> ", 0)
+      printf("\n\n")
+
+      #if((option == 1) || (option==11))
+      #    _limapar_ask(ccdname, "full_well_mode",items["full_well_mode"])
+
+  }
+
+
+}'
+#%MACROS%
+#%IMACROS%
+#%TOC%
+#%AUTHOR% L.Claustre, $Revision: $, $Date: $

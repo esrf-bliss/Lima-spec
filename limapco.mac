@@ -15,6 +15,7 @@ def limapcosetup(ccdname) '{
   _limapar_controlinit(ccdname, 0)
 
   # --- parameter definition & description
+
   _limapar_addconfig(ccdname, "lastError",LP_READ,1)
   _limapar_addtext(ccdname, "lastError", "Pco last error")
 
@@ -50,7 +51,6 @@ def limapcosetup(ccdname) '{
 
   _limapar_addconfig(ccdname, "rollingShutter",LP_RW|LP_LIST,1)
   _limapar_addtext(ccdname, "rollingShutter", "Pco Edge Rolling/Global shutter")
-
 
 }'
 

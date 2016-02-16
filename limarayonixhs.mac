@@ -12,7 +12,7 @@ def limarayonixhssetup(ccdname) '{
   _limapar_controlinit(ccdname, 0)
 
   # --- parameter definition
-  _limapar_addconfig(ccdname, "frame_mode", LP_RW|LP_LIST|LP_CB, 1)
+  _limapar_addconfig(ccdname, "frame_mode", LP_RW|LP_LIST, 1)
 
   _limapar_addconfig(ccdname, "cooler", LP_RW|LP_LIST, 1)
   _limapar_addconfig(ccdname, "vacuum_valve", LP_RW|LP_LIST, 1)
@@ -31,7 +31,7 @@ def limarayonixhssetup(ccdname) '{
 
  _limapar_addconfig(ccdname, "new_background_needed", LP_READ|LP_LIST, 1)
 
-  _limapar_addconfig(ccdname, "readout_mode", LP_RW|LP_LIST, 1)
+  _limapar_addconfig(ccdname, "readout_mode", LP_RW|LP_LIST|LP_CB, 1)
 
   # --- callback macro on parameter set
   _limapar_addconfig_cb(ccdname, "_limarayonixhs_setpar")
@@ -60,7 +60,7 @@ def limarayonixhssetup(ccdname) '{
 lima_addlimatype("RayonixHs", "limarayonixhssetup", "limarayonixhsmenu")
 
 def _limarayonixhs_setpar(ccdname, parname, value) '{
-  if (parname == "frame_mode") {
+  if (parname == "readout_mode") {
    #need to inform SPEC about possible image type change
    local unit
    unit  = LIMA_DEV[ccdname]["unit"]

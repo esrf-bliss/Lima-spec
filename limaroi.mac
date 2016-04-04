@@ -44,6 +44,8 @@ def limaroiunsetup '{
 
 def user_limaroi_add '#$*'
 def user_limaroi_remove '#$*'
+def user2_limaroi_add '#$*'
+def user2_limaroi_remove '#$*'
 
 #%UU% <ccdname> <roimne> <xbeg> <xend> <ybeg> <yend> 
 #%MDESC% 
@@ -75,7 +77,9 @@ def _limaroi_add(ccdname, roimne, roitype, xmin, xmax, ymin, ymax) '{
 
   _limaroi_server_send(ccdname)
   user_limaroi_add ccdname roimne
-}'
+
+  user2_limaroi_add ccdname roimne
+ }'
 
 #%UU% <roimne>
 #%MDESC%
@@ -120,6 +124,8 @@ def _limaroi_remove(roimne) '{
   
   _limaroi_server_remove(ccdname, roimne)
   user_limaroi_remove ccdname roimne
+
+  user2_limaroi_remove ccdname roimne
 }'
 
 #%UU% <ccdname>

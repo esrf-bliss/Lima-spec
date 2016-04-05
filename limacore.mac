@@ -809,8 +809,9 @@ def _limapar_getvaluelist(ccdname, parname, vals) '{
   devname= _limapar_getdevname(ccdname, parname)
   arrname= LIMA_DEV[ccdname]["arrname"]
   if (@arrname[parname]["property"]&LP_LIST) {
+     TANGO_ERR=-1
      nval= tango_io(devname, "getAttrStringValueList", parname, vals)
-     return (TANGO_ERR ? -1 : nval)
+     return (nval)
   } else {
      return (0)
   }

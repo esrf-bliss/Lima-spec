@@ -20,9 +20,13 @@ def limaandorsetup(ccdname) '{
   _limapar_addconfig(ccdname, "temperature", LP_READ, 1)
   _limapar_addconfig(ccdname, "fast_trigger",LP_RW|LP_LIST,1)
   _limapar_addconfig(ccdname, "shutter_level",LP_RW|LP_LIST,1)
-  _limapar_addconfig(ccdname, "p_gain",LP_RW,1)
-  _limapar_addconfig(ccdname, "adc_speed",LP_RW,1)
-  _limapar_addconfig(ccdname, "vs_speed",LP_RW,1)
+  _limapar_addconfig(ccdname, "p_gain",LP_RW|LP_LIST,1)
+  _limapar_addconfig(ccdname, "adc_speed",LP_RW|LP_LIST,1)
+  _limapar_addconfig(ccdname, "vs_speed",LP_RW|LP_LIST,1)
+  _limapar_addconfig(ccdname, "fan_mode",LP_RW|LP_LIST,1)
+  _limapar_addconfig(ccdname, "high_capacity",LP_RW|LP_LIST,1)
+  _limapar_addconfig(ccdname, "baseline_clamp",LP_RW|LP_LIST,1)
+
   
   
 
@@ -36,6 +40,9 @@ def limaandorsetup(ccdname) '{
   _limapar_addtext(ccdname, "p_gain", "Preamplifier gain")
   _limapar_addtext(ccdname, "adc_speed", "Adc/Horizontal speed pair")
   _limapar_addtext(ccdname, "vs_speed", "Vertical Shift speed")
+  _limapar_addtext(ccdname, "fan_mode", "Fan mode")
+  _limapar_addtext(ccdname, "high_capacity", "High Capacity mode")
+  _limapar_addtext(ccdname, "baseline_clamp", "Baseline clamping")
 
 
 }'
@@ -53,9 +60,12 @@ def limaandormenu(ccdname) '{
   items["temperature"] = -1
   items["fast_trigger"] = ""
   items["shutter_level"] = ""
-  items["p_gain"] = -1 
-  items["adc_speed"] = -1 
-  items["vs_speed"] = -1 
+  items["p_gain"] = "" 
+  items["adc_speed"] = ""
+  items["vs_speed"] = ""
+  items["fan_mode"] = ""
+  items["high_capacity"] = ""
+  items["baseline_clamp"] = ""
   
   option= 1
   
@@ -71,15 +81,19 @@ def limaandormenu(ccdname) '{
     tty_move(4, nl++, sprintf(" (r)  Status \[md\]%s\[me\]", items["cooling_status"]))
     _limamenu_printitem(ccdname, "cooler", items["cooler"], nl++,12)
     _limamenu_printitem(ccdname, "temperature_sp", items["temperature_sp"], nl++,13)
+    _limamenu_printitem(ccdname, "fan_mode", items["fan_mode"], nl++,14)
     nl++
     tty_move(0, nl++, "(2) Input/Output Signals :")
-    _limamenu_printitem(ccdname, "Fast Trigger Mode", items["fast_trigger"], nl++,21)
-    _limamenu_printitem(ccdname, "Shutter Level Mode", items["shutter_level"], nl++,22)
+    _limamenu_printitem(ccdname, "fast_trigger", items["fast_trigger"], nl++,21)
+    _limamenu_printitem(ccdname, "shutter_level", items["shutter_level"], nl++,22)
 
     tty_move(0, nl++, "(3) Expert setting :")
-    _limamenu_printitem(ccdname, "Preamplifier Gain", items["p_gain"], nl++,31)
-    _limamenu_printitem(ccdname, "ADC/Horiz. Speed", items["adc_speed"], nl++,32)
-    _limamenu_printitem(ccdname, "Vertical Shift Speed", items["vs_speed"], nl++,32)
+    _limamenu_printitem(ccdname, "p_gain", items["p_gain"], nl++,31)
+    _limamenu_printitem(ccdname, "adc_speed", items["adc_speed"], nl++,32)
+    _limamenu_printitem(ccdname, "vs_speed", items["vs_speed"], nl++,33)
+    _limamenu_printitem(ccdname, "high_capacity", items["high_capacity"], nl++,34)
+    _limamenu_printitem(ccdname, "baseline_clamp", items["baseline_clamp"], nl++,35)
+
     option= getval("\n\n\tOption ---> ", 0)
     printf("\n\n")
 
@@ -90,6 +104,8 @@ def limaandormenu(ccdname) '{
       _limapar_ask(ccdname, "cooler",items["cooler"])
     if((option==1) || (option==13))
       _limapar_ask(ccdname, "temperature_sp",items["temperature_sp"])
+    if((option==1) || (option==14))
+      _limapar_ask(ccdname, "fan_mode",items["fan_mode"])
     if((option==2) || (option==21))
       _limapar_ask(ccdname, "fast_trigger",items["fast_shutter"])
     if((option==2) || (option==22))
@@ -100,6 +116,10 @@ def limaandormenu(ccdname) '{
       _limapar_ask(ccdname, "adc_speed",items["adc_speed"])
     if((option==3) || (option==33))
       _limapar_ask(ccdname, "vs_speed",items["vs_speed"])
+    if((option==3) || (option==34))
+      _limapar_ask(ccdname, "high_capacity",items["high_capacity"])
+    if((option==3) || (option==35))
+      _limapar_ask(ccdname, "baseline_clamp",items["baseline_clamp"])
   }
 }'
 #%MACROS%

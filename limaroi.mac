@@ -44,6 +44,8 @@ def limaroiunsetup '{
 
 def user_limaroi_add '#$*'
 def user_limaroi_remove '#$*'
+def user2_limaroi_add '#$*'
+def user2_limaroi_remove '#$*'
 
 #%UU% <ccdname> <roimne> <xbeg> <xend> <ybeg> <yend> 
 #%MDESC% 
@@ -75,7 +77,9 @@ def _limaroi_add(ccdname, roimne, roitype, xmin, xmax, ymin, ymax) '{
 
   _limaroi_server_send(ccdname)
   user_limaroi_add ccdname roimne
-}'
+
+  user2_limaroi_add ccdname roimne
+ }'
 
 #%UU% <roimne>
 #%MDESC%
@@ -106,12 +110,22 @@ def _limaroi_remove(roimne) '{
 
   ccdname= LIMA_ROI[roimne]["ccdname"]
 
-  list_remove(LIMA_ROI, roimne)
   if ((roinum= cnt_num(roimne))!=-1) {
     S[roinum]= 0
   }
+  # clean  associative arrays up in case someone is using them
+  # via the user_ hook macros (e.i zaplima.mac !!)
+  delete LIMA_ROI_SRV[ccdname][LIMA_ROI[roimne]["roi_id"]]
+  list_remove(LIMA_ROI, roimne)
+  if (LIMA_ROI_SRV[ccdname]["nroi"] >0) { 
+   LIMA_ROI_SRV[ccdname]["nroi"]-=1 
+   LIMA_ROI_SRV[ccdname]["nroi_srv"]-=1 
+  }
+  
   _limaroi_server_remove(ccdname, roimne)
   user_limaroi_remove ccdname roimne
+
+  user2_limaroi_remove ccdname roimne
 }'
 
 #%UU% <ccdname>
@@ -659,6 +673,9 @@ def _limaroi_server_send(ccdname) '{
     }
 
     if (state!=0) {
+      # set the RunLevel high enough to allow other operations like Mask/ffield/Background
+      # to be applied first at level 0.
+      tango_put(srv,"RunLevel", 5)
       tango_io(srv, "Start")
     }
     tango_io(srv, "setRois", argroi)

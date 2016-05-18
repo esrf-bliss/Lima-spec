@@ -6,6 +6,13 @@
 #
 #$Revision: $
 #
+# 2016/05/18 rh
+# added new attributes
+#   - lastImgRecorded
+#   - lastImgAcquired
+#   - pixelRate, pixelRateIngo, pixelRateValidValues
+#   - adcMax
+# update limapcomenu
 
 #=====================================================================
 #=====================================================================
@@ -15,7 +22,6 @@ def limapcosetup(ccdname) '{
   _limapar_controlinit(ccdname, 0)
 
   # --- parameter definition & description
-
   _limapar_addconfig(ccdname, "lastError",LP_READ,1)
   _limapar_addtext(ccdname, "lastError", "Pco last error")
 
@@ -34,6 +40,12 @@ def limapcosetup(ccdname) '{
   _limapar_addconfig(ccdname, "frameRate",LP_READ,1)
   _limapar_addtext(ccdname, "frameRate", "Frame Rate (Hz)")
 
+  _limapar_addconfig(ccdname, "lastImgRecorded",LP_READ,1)
+  _limapar_addtext(ccdname, "lastImgRecorded", "last image recorded (Dimax, 2K, 4K)")
+
+  _limapar_addconfig(ccdname, "lastImgAcquired",LP_READ,1)
+  _limapar_addtext(ccdname, "lastImgAcquired", "last image acquired")
+
   _limapar_addconfig(ccdname, "maxNbImages",LP_READ,1)
   _limapar_addtext(ccdname, "maxNbImages", "Maximum number of images")
 
@@ -46,11 +58,25 @@ def limapcosetup(ccdname) '{
   _limapar_addconfig(ccdname, "traceAcq",LP_READ,1)
   _limapar_addtext(ccdname, "traceAcq", "Pco cam trace/time acq")
 
-  _limapar_addconfig(ccdname, "pixelRate",LP_RW|LP_LIST,1)
-  _limapar_addtext(ccdname, "pixelRate", "Pco Edge pixel rate (MHz)")
+  #_limapar_addconfig(ccdname, "pixelRate",LP_RW|LP_LIST,1)
+  _limapar_addconfig(ccdname, "pixelRate",LP_RW,1)
+  _limapar_addtext(ccdname, "pixelRate", "Pco Edge/2K/4K pixel rate (MHz)")
+
+  _limapar_addconfig(ccdname, "pixelRateInfo",LP_READ,1)
+  _limapar_addtext(ccdname, "pixelRateInfo", "Pco pixel rate info (MHz)")
+
+  _limapar_addconfig(ccdname, "pixelRateValidValues",LP_READ,1)
+  _limapar_addtext(ccdname, "pixelRateValidValues", "Pco pixel rate info (MHz)")
+
+  _limapar_addconfig(ccdname, "adc",LP_RW,1)
+  _limapar_addtext(ccdname, "adc", "working ADC")
+
+  _limapar_addconfig(ccdname, "adcMax",LP_READ,1)
+  _limapar_addtext(ccdname, "adcMax", "max nr of working ADC")
 
   _limapar_addconfig(ccdname, "rollingShutter",LP_RW|LP_LIST,1)
   _limapar_addtext(ccdname, "rollingShutter", "Pco Edge Rolling/Global shutter")
+
 
 }'
 
@@ -68,6 +94,7 @@ def limapcomenu(ccdname) '{
   
   items["pixelRate"] = ""
   items["rollingShutter"] = ""
+  items["adc"] = ""
   option= 1
 
   while (option) {
@@ -86,12 +113,14 @@ def limapcomenu(ccdname) '{
     tty_move(0, nl++, "(1) Configuration :")
     _limamenu_printitem(ccdname, "pixelRate", items["pixelRate"], nl++,11)
     _limamenu_printitem(ccdname, "rollingShutter", items["rollingShutter"], nl++,12)
+    _limamenu_printitem(ccdname, "adc", items["adc"], nl++,13)
     nl++
 
     option= getval("\n\n\tOption ---> ", 0)
     printf("\n\n")
 
     if(option==11){
+      print "Valid values (Hz):", _limapar_get(ccdname, "pixelRateValidValues")
       _limapar_ask(ccdname, "pixelRate",items["pixelRate"])
 
     } else if(option==12){
@@ -103,11 +132,15 @@ def limapcomenu(ccdname) '{
       p
       sleep(1)
 
-    for (parname in items) {
-      items[parname]= _limapar_get(ccdname, parname)
-    }
+      for (parname in items) {
+         items[parname]= _limapar_get(ccdname, parname)
+       }  
 
-    }
+    } else if(option==13){
+      print "max value:", _limapar_get(ccdname, "adcMax")
+      _limapar_ask(ccdname, "adc",items["adc"])
+
+    } 
     
 
   }

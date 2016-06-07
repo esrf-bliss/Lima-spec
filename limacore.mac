@@ -911,7 +911,7 @@ cdef("_limapar_set_post_hook","\n;if(\$\#){};\n","_limacore_")
 
 #%IU% (ccdname, parname, value, paridx)
 def _limapar_set(ccdname, parname, value, paridx) '{
-  local devname arrname parsize partype hascb setval
+  local devname arrname parsize partype hascb setval ret
  
   arrname= LIMA_DEV[ccdname]["arrname"]
   devname= _limapar_getdevname(ccdname, parname)
@@ -937,7 +937,13 @@ def _limapar_set(ccdname, parname, value, paridx) '{
       return 0
     }
     LIMA_VALS[paridx]= value
-    tango_put(devname, parname, LIMA_VALS)
+
+    TANGO_ERR=-1
+    ret = tango_put(devname, parname, LIMA_VALS)
+    if(ret == -1) {
+      _lima_tango_error ccdname LIMA_DEV[ccdname]["control"]
+      return 0
+    }
 
     if (@arrname[parname]["property"]&LP_CB) {
       if (!_limapar_set_callback(@arrname[parname]["devtype"], ccdname, parname, LIMA_VALS)) {
@@ -946,7 +952,13 @@ def _limapar_set(ccdname, parname, value, paridx) '{
       }
     }
   } else {
-    tango_put(devname, parname, value)
+    TANGO_ERR=-1
+    ret = tango_put(devname, parname, value)
+    if(ret == -1) {
+      _lima_tango_error ccdname LIMA_DEV[ccdname]["control"]
+      return 0
+    }
+
     if (@arrname[parname]["property"]&LP_CB) {
       if (!_limapar_set_callback(@arrname[parname]["devtype"], ccdname, parname, value)) {
         _lima_error ccdname; printf("Callback macro on <%s> FAILED.\n", parname)

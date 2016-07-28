@@ -18,7 +18,7 @@ def limaandorsetup(ccdname) '{
   _limapar_addconfig(ccdname, "cooler",LP_RW|LP_LIST,1)
   _limapar_addconfig(ccdname, "temperature_sp", LP_RW|LP_MOT, 1)
   _limapar_addconfig(ccdname, "temperature", LP_READ, 1)
-  _limapar_addconfig(ccdname, "fast_trigger",LP_RW|LP_LIST,1)
+  _limapar_addconfig(ccdname, "fast_ext_trigger",LP_RW|LP_LIST,1)
   _limapar_addconfig(ccdname, "shutter_level",LP_RW|LP_LIST,1)
   _limapar_addconfig(ccdname, "p_gain",LP_RW|LP_LIST,1)
   _limapar_addconfig(ccdname, "adc_speed",LP_RW|LP_LIST,1)
@@ -35,7 +35,7 @@ def limaandorsetup(ccdname) '{
   _limapar_addtext(ccdname, "cooling_status", "Cooling Status")
   _limapar_addtext(ccdname, "temperature_sp", "Temperature set-point")  
   _limapar_addtext(ccdname, "temperature", "Sensor Temperature")  
-  _limapar_addtext(ccdname, "fast_trigger", "Fast Trigger Mode")  
+  _limapar_addtext(ccdname, "fast_ext_trigger", "Fast External Trigger Mode")  
   _limapar_addtext(ccdname, "shutter_level", "Shutter Level Mode")
   _limapar_addtext(ccdname, "p_gain", "Preamplifier gain")
   _limapar_addtext(ccdname, "adc_speed", "Adc/Horizontal speed pair")
@@ -58,7 +58,7 @@ def limaandormenu(ccdname) '{
   items["cooler"] = ""
   items["temperature_sp"] = -1
   items["temperature"] = -1
-  items["fast_trigger"] = ""
+  items["fast_ext_trigger"] = ""
   items["shutter_level"] = ""
   items["p_gain"] = "" 
   items["adc_speed"] = ""
@@ -84,7 +84,7 @@ def limaandormenu(ccdname) '{
     _limamenu_printitem(ccdname, "fan_mode", items["fan_mode"], nl++,14)
     nl++
     tty_move(0, nl++, "(2) Input/Output Signals :")
-    _limamenu_printitem(ccdname, "fast_trigger", items["fast_trigger"], nl++,21)
+    _limamenu_printitem(ccdname, "fast_ext_trigger", items["fast_ext_trigger"], nl++,21)
     _limamenu_printitem(ccdname, "shutter_level", items["shutter_level"], nl++,22)
 
     tty_move(0, nl++, "(3) Expert setting :")
@@ -106,8 +106,12 @@ def limaandormenu(ccdname) '{
       _limapar_ask(ccdname, "temperature_sp",items["temperature_sp"])
     if((option==1) || (option==14))
       _limapar_ask(ccdname, "fan_mode",items["fan_mode"])
-    if((option==2) || (option==21))
-      _limapar_ask(ccdname, "fast_trigger",items["fast_shutter"])
+    if((option==2) || (option==21)) {
+      tty_cntl("md");printf("WARNING:"); tty_cntl("me"); print "setting this mode to ON speeds up the acquisition"
+      print "but it switches off the CCD \"cleanup cycle\" before starting a new acquisition."
+      print "It only has effect if the trigger mode is set to external signal.\n\n"
+      _limapar_ask(ccdname, "fast_ext_trigger",items["fast_ext_shutter"])
+    }
     if((option==2) || (option==22))
       _limapar_ask(ccdname, "shutter_level",items["shutter_level"])
     if((option==3) || (option==31))

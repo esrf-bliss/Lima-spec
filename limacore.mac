@@ -1121,6 +1121,9 @@ def _limamenu_printtitle(ccdname, title, devtype) '{
 }'
 
 #%IU% (ccdname, parname, value, nl, option)
+#%MDESC%
+# option -1 print the item without the option number at the begining of the line.
+#         
 def _limamenu_printitem(ccdname, parname, value, nl, option) '{
   local arrname txt
   arrname= LIMA_DEV[ccdname]["arrname"]
@@ -1128,7 +1131,12 @@ def _limamenu_printitem(ccdname, parname, value, nl, option) '{
   if (!txt) txt= parname
   txt= txt " "
   while (length(txt)<35) { txt= txt "." }
-  tty_move(5,nl, sprintf("(%d) %s = \[md\]%s\[me\]", option, txt, value))
+    if (option ==-1){
+      tty_move(5,nl, sprintf("     %s = \[md\]%s\[me\]", txt, value))
+    }
+    else{
+      tty_move(5,nl, sprintf("(%d) %s = \[md\]%s\[me\]", option, txt, value))
+    }
 }'
 
 jtdo ("lima/limatools")

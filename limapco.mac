@@ -58,26 +58,29 @@ def limapcosetup(ccdname) '{
   _limapar_addconfig(ccdname, "traceAcq",LP_READ,1)
   _limapar_addtext(ccdname, "traceAcq", "Pco cam trace/time acq")
 
+
   #_limapar_addconfig(ccdname, "pixelRate",LP_RW|LP_LIST,1)
   _limapar_addconfig(ccdname, "pixelRate",LP_RW,1)
-  _limapar_addtext(ccdname, "pixelRate", "Pco Edge/2K/4K pixel rate (MHz)")
+  if (_limapar_get(ccdname, "pixelRateValidValues") != "invalid"){
+    _limapar_addconfig(ccdname, "pixelRateValidValues", LP_READ,1)
+    _limapar_addtext(ccdname, "pixelRateValidValues", "Pco pixel rate usable values (Hz)")
+    _limapar_addtext(ccdname, "pixelRate", "Pco Edge/2K/4K pixel rate set (Hz)")
+  }
+  else{
+    _limapar_addtext(ccdname, "pixelRate", "Pco Edge/2K/4K pixel rate")
+  }
 
   _limapar_addconfig(ccdname, "pixelRateInfo",LP_READ,1)
   _limapar_addtext(ccdname, "pixelRateInfo", "Pco pixel rate info (MHz)")
-
-  _limapar_addconfig(ccdname, "pixelRateValidValues",LP_READ,1)
-  _limapar_addtext(ccdname, "pixelRateValidValues", "Pco pixel rate info (MHz)")
-
-  _limapar_addconfig(ccdname, "adc",LP_RW,1)
-  _limapar_addtext(ccdname, "adc", "working ADC")
-
-  _limapar_addconfig(ccdname, "adcMax",LP_READ,1)
-  _limapar_addtext(ccdname, "adcMax", "max nr of working ADC")
-
+ 
   _limapar_addconfig(ccdname, "rollingShutter",LP_RW|LP_LIST,1)
   _limapar_addtext(ccdname, "rollingShutter", "Pco Edge Rolling/Global shutter")
+  
+  _limapar_addconfig(ccdname, "adc",LP_RW,1)
+  _limapar_addtext(ccdname, "adc", "Number of present working ADC")
 
-
+  _limapar_addconfig(ccdname, "adcMax",LP_READ,1)
+  _limapar_addtext(ccdname, "adcMax", "Max. number of available ADC")
 }'
 
 #=====================================================================
@@ -91,16 +94,26 @@ def limapcomenu(ccdname) '{
   local items[] parname
   local nl option
   local tabSpc ; tabSpc = 5
+  local res
   
   items["pixelRate"] = ""
+  items["pixelRateValidValues"] = ""
   items["rollingShutter"] = ""
   items["adc"] = ""
+  items["adcMax"] = ""
+  items["pixelRateAvailable"] = ""
+
   option= 1
 
   while (option) {
 
     for (parname in items) {
-      items[parname]= _limapar_get(ccdname, parname)
+        if (parname=="pixelRateAvailable"){
+          items["pixelRateAvailable"]="LOW or HIGH"
+        }
+        else{
+          items[parname]= _limapar_get(ccdname, parname)
+        }
     }
 
     nl= _limamenu_printtitle(ccdname, "Configuration", "config")
@@ -111,16 +124,31 @@ def limapcomenu(ccdname) '{
     nl++
     
     tty_move(0, nl++, "(1) Configuration :")
-    _limamenu_printitem(ccdname, "pixelRate", items["pixelRate"], nl++,11)
+
+    if (_limapar_get(ccdname, "pixelRateValidValues")!="invalid"){
+      _limamenu_printitem(ccdname, "pixelRateValidValues", items["pixelRateValidValues"], nl++,11)
+      _limamenu_printitem(ccdname, "pixelRate", items["pixelRate"], nl++,-1)
+    }
+    else{
+    _limamenu_printitem(ccdname, "Pixel rate usable  values", items["pixelRateAvailable"], nl++,11)
+    _limamenu_printitem(ccdname, "pixelRate", items["pixelRate"], nl++,-1)
+    }
+    
     _limamenu_printitem(ccdname, "rollingShutter", items["rollingShutter"], nl++,12)
-    _limamenu_printitem(ccdname, "adc", items["adc"], nl++,13)
+
+    if ( (_limapar_get(ccdname, "adcMax")!="invalid") && (_limapar_get(ccdname, "adc")!="invalid") ){   
+      _limamenu_printitem(ccdname, "adcMax", items["adcMax"], nl++,13)
+      _limamenu_printitem(ccdname, "adc", items["adc"], nl++,-1)
+    }
     nl++
 
     option= getval("\n\n\tOption ---> ", 0)
     printf("\n\n")
 
     if(option==11){
-      print "Valid values (Hz):", _limapar_get(ccdname, "pixelRateValidValues")
+      if (_limapar_get(ccdname, "pixelRateValidValues")!="invalid"){
+          print LIMA_PARS_edge["pixelRateValidValues"]["desc"], "=", _limapar_get(ccdname, "pixelRateValidValues")
+         }
       _limapar_ask(ccdname, "pixelRate",items["pixelRate"])
 
     } else if(option==12){
@@ -129,19 +157,22 @@ def limapcomenu(ccdname) '{
       p "Waiting for change the shutter (about 15s) ...."
       sleep(3)
       while( (s=_limapar_get(ccdname, "acq_status")) != "Ready"){ printf("+"); sleep(1);}
-      p
-      sleep(1)
+        p
+        sleep(1)
 
       for (parname in items) {
-         items[parname]= _limapar_get(ccdname, parname)
+        items[parname]= _limapar_get(ccdname, parname)
        }  
 
     } else if(option==13){
-      print "max value:", _limapar_get(ccdname, "adcMax")
-      _limapar_ask(ccdname, "adc",items["adc"])
-
-    } 
-    
+        
+        TANGO_ERR=-1 ;
+        res = _limapar_get(ccdname,"adcMax" )
+        if(res !=-1){
+          print LIMA_PARS_edge["adcMax"]["desc"], "=", _limapar_get(ccdname, "adcMax")
+         _limapar_ask(ccdname, "adc",items["adc"])
+        }
+    }                        
 
   }
 }'

@@ -13,7 +13,7 @@
 #   - pixelRate, pixelRateIngo, pixelRateValidValues
 #   - adcMax
 # update limapcomenu
-
+# 2016/10/07 rh - fixed limapcomenu (camera information)
 #=====================================================================
 #=====================================================================
 def limapcosetup(ccdname) '{
@@ -119,7 +119,7 @@ def limapcomenu(ccdname) '{
     nl= _limamenu_printtitle(ccdname, "Configuration", "config")
 
     tty_move(0, nl++, "Camera information:")
-    msg = _limapar_get(ccdname, "camType")
+    msg = _limapar_get(ccdname, "camera_model")
     tty_move(tabSpc, nl++, msg)
     nl++
     

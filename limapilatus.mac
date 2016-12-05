@@ -9,12 +9,14 @@ def limapilatussetup(ccdname) '{
   _limapar_addconfig(ccdname, "threshold", LP_RW, 1,"long")
   _limapar_addconfig(ccdname, "energy_threshold", LP_RW|LP_MOT, 1,"double")
   _limapar_addconfig(ccdname, "fill_mode",LP_RW|LP_LIST,1)
+  _limapar_addconfig(ccdname, "nb_exposure_per_frame", LP_RW|LP_MOT, 1,"double")
 
   # --- parameter description
   _limapar_addtext(ccdname, "threshold_gain", "Threshold Gain")
   _limapar_addtext(ccdname, "threshold", "Threshold value in (eV)")
   _limapar_addtext(ccdname, "fill_mode", "Pixel Gap Filling")
   _limapar_addtext(ccdname, "energy_threshold", "Energy Threshold (keV)")
+  _limapar_addtext(ccdname, "nb_exposure_per_frame", "Number exposure per frame")
 }'
 
 lima_addlimatype("Pilatus", "limapilatussetup", "limapilatusmenu")

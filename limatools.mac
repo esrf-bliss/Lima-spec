@@ -745,6 +745,134 @@ def _lima_debug_set(ccdname, attrname, debvals) '{
     tango_put(dev, attrname, vars)
 }'
 
+# -----------------------------------------------------------------------------
+# COMMON HEADER UTILS
+# -----------------------------------------------------------------------------
+
+#%UU% [motors] [machine] [counters]
+#%MDESC%
+# Put some standard stuff in user_limaacq_common_header:
+#%BR% motors : will add all active motor positions
+#%BR% counters : will add all active counters
+#%BR% machine : add SRCURR and SRMODE (direct reading)
+#
+def limacommonheadersetup '{
+    local iarg narg argv[]
+    if (!$#) {
+        print "Usage: $0 [motors] [machine] [counters]"
+        exit
+    }
+    cdef("", "", "limachead", "delete")
+    narg= split("$*", argv)
+    for (iarg=1; iarg<narg; iarg++) {
+        if (argv[iarg]=="motors") {
+            cdef("user_limaacq_common_header", "_lima_common_header_motors;", "limachead")
+        }
+        else if (argv[iarg]=="machine") {
+            cdef("user_limaacq_common_header", "_lima_common_header_machine;", "limachead")
+        }
+        else if (argv[iarg]=="counters") {
+            cdef("user_limaacq_common_header", "_lima_common_header_counters;", "limachead")
+        }
+    }
+    setup_tail("limacommonheader")
+}'
+
+#%IU%
+def limacommonheaderunsetup '{
+    cdef("", "", "limachead", "delete")
+}'
+
+def _lima_common_header_motors '{
+    local imot
+    for (imot=0; imot<MOTORS; imot++) {
+        if (is_using_motor(imot)) {
+            LIMA_COMMON_HEADER[sprintf("%s", motor_mne(imot))]= sprintf("%g", A[imot])
+        }
+    }
+}'
+
+#%IU%
+def _lima_common_header_machine '{
+    local srcurr mode
+    srcurr= mi_SR_Current_fast()
+    mode= mi_mode()
+
+    LIMA_COMMON_HEADER["SRCURR"]= sprintf("%g", srcurr)
+    LIMA_COMMON_HEADER["SRMODE"]= sprintf("%s", mode)
+}'
+
+#%IU%
+def _lima_common_header_counters '{
+    local icnt
+    for (icnt=0; icnt<COUNTERS; icnt++) {
+        if (is_using_counter(icnt)) {
+            LIMA_COMMON_HEADER[sprintf("%s", cnt_mne(icnt))]= sprintf("%g", S[icnt])
+        }
+    }
+}'
+
+# -----------------------------------------------------------------------------
+# FRAME HEADER UTILS
+# -----------------------------------------------------------------------------
+
+#%UU%
+#%MDESC%
+# Put all counters in ass array %B%LIMA_FRAME_HEADER_DATA%B% in user_getcounts
+# to be used by another spec session to update frame headers
+#
+def limaframeheaderserversetup '{
+    cdef("user_getcounts", "_lima_frame_header_server_update;", "limafhsrv", 0x20)
+    setup_tail("limaframeheaderserver")
+}'
+
+#%IU%
+def limaframeheaderserverunsetup '{
+    cdef("", "", "limafhsrv", "delete")
+}'
+
+#%IU%
+def _lima_frame_header_server_update '{
+    global LIMA_FRAME_HEADER_DATA[]
+    local icnt
+    for (icnt=0; icnt<COUNTERS; icnt++) {
+        if (is_using_counter(icnt)) {
+            LIMA_FRAME_HEADER_DATA[sprintf("%s", cnt_mne(icnt))]= sprintf("%f", S[icnt])
+        }
+    }
+}'
+
+#%UU%
+#%MDESC%
+# Hook to user_limaacq_frame_header reading counters of ass array %B%LIMA_FRAME_HEADER_DATA%B%
+# from a remote spec session
+#
+def limaframeheaderremotesetup '{
+    if (!$#) {
+        print "Usage: $0 <remote_spec_session>"
+        exit
+    }
+    cmd= sprintf("_lima_frame_header_remote_update(\"%s\");", "$1")
+    cdef("user_limaacq_frame_header", cmd, "limafhrem")
+    setup_tail("limaframeheaderremote")
+}'
+
+#%IU%
+def limaframeheaderremoteunsetup '{
+    cdef("", "", "limafhrem", "delete")
+}'
+
+#%IU%
+def _lima_frame_header_remote_update(specname) '{
+    local head_data[]
+    local name
+    head_data= prop_get(specname, "var/LIMA_FRAME_HEADER_DATA")
+    for (name in head_data) {
+        LIMA_FRAME_HEADER[name]= head_data[name]
+    }
+}'
+
+
 #%MACROS%
 #%IMACROS%
 #%TOC%

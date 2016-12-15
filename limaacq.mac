@@ -120,6 +120,7 @@ def _limatake(ccds, _expo, _nimg, _it_time, _rate) '{
     LIMATAKE[iccd]["autosave"]= (LIMATAKE[iccd]["savmode"]!="MANUAL")
     LIMATAKE[iccd]["autoheader"]= (LIMATAKE[iccd]["savmode"]=="AUTO_HEADER")
     LIMATAKE[iccd]["nacq"]= -1
+    LIMATAKE[iccd]["nhead"]= -1
     LIMATAKE[iccd]["nsave"]= -1
     LIMATAKE[iccd]["nread"]= -1
     LIMATAKE[iccd]["readtime"]= 0
@@ -127,6 +128,7 @@ def _limatake(ccds, _expo, _nimg, _it_time, _rate) '{
 
   cdef("cleanup_once", "_limatake_cleanup;", "limatake")
 
+  # --- prepare acq
   for (iccd=0; iccd<ccds["nb"]; iccd++) {
     if (LIMATAKE[iccd]["trigger"] != -1)  {
       _limapar_set(ccds[iccd], "acq_trigger_mode", "INTERNAL_TRIGGER")
@@ -137,6 +139,17 @@ def _limatake(ccds, _expo, _nimg, _it_time, _rate) '{
     if (_limaacq_prepare(ccds[iccd], _expo, _nimg) == -1) return
   }
 
+  # --- update common header if needed
+  for (iccd=0; iccd<ccds["nb"]; iccd++) {
+    if (LIMATAKE[iccd]["autosave"]) {
+      if (LIMATAKE[iccd]["autoheader"]) {
+        _limaacq_reset_frame_header(ccds[iccd])
+      }
+      _limaacq_update_common_header(ccds[iccd])
+    }
+  }
+
+  # --- start acq
   for (iccd=0; iccd<ccds["nb"]; iccd++) {
     if(_limaacq_start(ccds[iccd]) == -1) return
   }
@@ -152,8 +165,20 @@ def _limatake_cleanup '{
   local iccd ccdname
 
   for (iccd=0; iccd<LIMATAKE["nb"]; iccd++) {
+    # --- stop ccd
     ccdname= LIMATAKE[iccd]["ccdname"]
     _limaacq_stop(ccdname)
+
+    # --- send last frame headers if needed
+    LIMATAKE[iccd]["nacq"]= _limapar_get(ccdname, "last_image_ready")
+    if (LIMATAKE[iccd]["autoheader"]) {
+       if (LIMATAKE[iccd]["nacq"] > LIMATAKE[iccd]["nhead"]) {
+           _limaacq_update_frame_header(ccdname, LIMATAKE[iccd]["nhead"], LIMATAKE[iccd]["nacq"])
+           LIMATAKE[iccd]["nhead"]= LIMATAKE[iccd]["nacq"]
+       }
+    }
+
+    # --- reset previous acq parameters
     if (LIMATAKE[iccd]["it_time"] != -1) {
       _limapar_set(ccdname, "latency_time", LIMATAKE[iccd]["it_time"])
     }
@@ -197,6 +222,7 @@ def _limatake_wait(rate) '{
 #%IU%
 #%MDESC%
 # Update last image number acquired/saved during a limatake acquisition
+#%BR% if saving_mode = %B%AUTO_HEADER%B%, update already acquired frame headers
 #
 def _limatake_wait_update() '{
   local iccd ccdname
@@ -205,6 +231,12 @@ def _limatake_wait_update() '{
     ccdname= LIMATAKE[iccd]["ccdname"]
     LIMATAKE[iccd]["lastacq"]= LIMATAKE[iccd]["nacq"]
     LIMATAKE[iccd]["nacq"]= _limapar_get(ccdname, "last_image_ready")
+    if (LIMATAKE[iccd]["autoheader"]) {
+       if (LIMATAKE[iccd]["nacq"] > LIMATAKE[iccd]["nhead"]) {
+           _limaacq_update_frame_header(ccdname, LIMATAKE[iccd]["nhead"], LIMATAKE[iccd]["nacq"])
+           LIMATAKE[iccd]["nhead"]= LIMATAKE[iccd]["nacq"]
+       }
+    }
     if (LIMATAKE[iccd]["autosave"]) {
       LIMATAKE[iccd]["nsave"]= _limapar_get(ccdname, "last_image_saved")
     }
@@ -249,6 +281,10 @@ def _limatake_wait_read(rate) '{
   }
 }'
 
+#%IU%
+#%MDESC%
+# read last image of an acquisition
+#
 def _limatake_readlast() '{
   local iccd
 
@@ -263,7 +299,7 @@ def _limatake_readlast() '{
 
 #%IU%
 #%MDESC%
-# Print message during limtake acquisition
+# Print message during limatake acquisition
 #
 def _limatake_wait_msg(doclear) '{
   local iccd cy msg
@@ -305,6 +341,10 @@ def _limaacq_read(ccdname, framenr) '{
 #   tango_io(LIMA_DEV[ccdname]["control"],"readImage",framenr, @arrname)
 # }'
 
+#%IU% (ccdname, expo, nimg)
+#%MDESC%
+# Prepare an acquisition of <nimg> frames with <expo> exposure time
+#
 def _limaacq_prepare(ccdname, expo, nimg) '{
   local ret
   _limapar_set(ccdname, "acq_nb_frames", nimg)
@@ -319,6 +359,10 @@ def _limaacq_prepare(ccdname, expo, nimg) '{
   return 0
 }'
 
+#%IU% (ccdname)
+#%MDESC%
+# Start an acquisition and hook a stop in cleanup_once
+#
 def _limaacq_start(ccdname) '{
   local cmd key ret
   cmd= sprintf("_limaacq_stop(\"%s\"); ", ccdname)
@@ -333,6 +377,10 @@ def _limaacq_start(ccdname) '{
   return 0
 }'
 
+#%IU$ (ccdname)
+#%MDESC%
+# stop an acquisition
+#
 def _limaacq_stop(ccdname) '{
   local ret
   TANGO_ERR = -1
@@ -343,6 +391,10 @@ def _limaacq_stop(ccdname) '{
   }
 }'
 
+#%IU% (ccdname)
+#%MDESC%
+# Return 1 when an acquisition is running, 0 otherwise
+#
 def _limaacq_running(ccdname) '{
   local acqstatus
   acqstatus= _limapar_get(ccdname, "acq_status")
@@ -410,6 +462,11 @@ def _limaacq_arrayinit(ccdname) '{
 #}'
 
 
+#%IU% (ccdname)
+#%MDESC%
+# If saving mode is not %B%MANUAL%B%, print out next filename, saving mode and format
+# %BR% Return current saving_mode
+#
 def _limaacq_checksaving(ccdname) '{
   local savmode savfmt savdir savpre savsuf savnum savidxfmt idx
 
@@ -428,6 +485,98 @@ def _limaacq_checksaving(ccdname) '{
     printf("Saving in %s/%s%s%s [%s-%s]\n", savdir, savpre, idx, savsuf, savmode, savfmt)
   }
   return savmode
+}'
+
+cdef("user_limaacq_frame_header")
+
+#%IU% (ccdname, from_idx, to_idx)
+#%MDESC%
+# Update frame headers from image <from_idx> to image <to_idx> (same header)
+# %BR% Header should be filled by beamline macro using %B%user_limaacq_frame_header%B%
+# by adding pairs of name/value in global associative array %B%LIMA_FRAME_HEADER%B%
+# %BR% The global array is deleted after each update.
+# %BR% Two time stamps are automatically added : %B%frame_header_time%B% which gives the
+# time the macro has been called, and %B%frame_header_took%B% gives in sec the time
+# spent in user_limaacq_frame_header.
+# %BR% A minimal frame header is always sent so that, even if user_limaacq_frame_header
+# is not filling LIMA_FRAME_HEADER, the saving_mode AUTO_HEADER will always work
+#
+def _limaacq_update_frame_header(ccdname, from_idx, to_idx) '{
+  global LIMA_FRAME_HEADER[]
+  local headarr[] headstr nhead
+  local begt endt
+
+  begt= time()
+  user_limaacq_frame_header
+  endt= time()-begt
+
+  headstr= sprintf("frame_header_time=%f\n", begt)
+  headstr= sprintf("%sframe_header_took=%f\n", headstr, endt)
+  for (name in LIMA_FRAME_HEADER) {
+    headstr= sprintf("%s%s=%s\n", headstr, name, LIMA_FRAME_HEADER[name])
+  }
+
+  nhead= 0
+  for (fidx=from_idx; fidx<=to_idx; fidx++, nhead++) {
+    headarr[nhead]= sprintf("%d;%s", fidx, headstr)
+  }
+
+  tango_io(LIMA_DEV[ccdname]["control"], "setImageHeader", headarr)
+
+  unglobal LIMA_FRAME_HEADER
+}'
+
+#%IU% (ccdname)
+#%MDESC%
+# Reset frame headers
+#
+def _limaacq_reset_frame_header(ccdname) '{
+  tango_io(LIMA_DEV[ccdname]["control"], "resetFrameHeaders")
+}'
+
+cdef("user_limaacq_common_header")
+
+#%IU% (ccdname)
+#%MDESC%
+# Update lima common header at the beginning of an acquisition.
+# %BR% to set values in that header, cdef a beamline macro to
+# %B%user_limaacq_common_header%B% and fill global ass. array
+# %B%LIMA_COMMON_HEADER%B% with pairs of name/value
+# %BR% The global array is deleted after each call
+# %BR% Two time stamps are automatically added: %B%common_header_time%B%
+# gives the time the macro has been called, and %B%common_header_took%B%
+# gives in sec the time to execute beamline user_limaacq_common_header
+#
+def _limaacq_update_common_header(ccdname) '{
+  global LIMA_COMMON_HEADER[]
+  local headarr[] nhead begt endt
+
+  begt= time()
+  user_limaacq_common_header
+  endt= time() - begt
+
+  nhead= 0
+  for (name in LIMA_COMMON_HEADER) {
+    nhead++
+  }
+  if (nhead) {
+    nhead= 0
+    headarr[nhead++]= sprintf("common_header_time=%f", begt)
+    headarr[nhead++]= sprintf("common_header_took=%f", endt)
+    for (name in LIMA_COMMON_HEADER) {
+      headarr[nhead++]= sprintf("%s=%s", name, LIMA_COMMON_HEADER[name])
+    }
+    _limapar_set(ccdname, "saving_common_header", headarr, -1)
+  }
+  unglobal LIMA_COMMON_HEADER
+}'
+
+#%IU% (ccdname)
+#%MDESC%
+# Reset common headers
+#
+def _limaacq_reset_common_header(ccdname) '{
+  tango_io(LIMA_DEV[ccdname]["control"], "resetCommonHeader")
 }'
 
 #%MACROS%

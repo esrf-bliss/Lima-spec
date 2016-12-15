@@ -535,6 +535,216 @@ def _limacnt_getcounts '{
 	}
 }'
 
+# -----------------------------------------------------------------------------
+# DEBUG UTILS
+# -----------------------------------------------------------------------------
+
+#%UU% <ccdname>
+#%MDESC%
+# Activate ALL debug types and modules on given lima server
+#
+def limadebugon '{
+    local ccdname
+    if ($# != 1) {
+        print "Usage: $0 <ccdname>"
+        exit
+    }
+    ccdname= "$1"
+    if (list_check(LIMA_DEV, ccdname)<=0) {
+        _lima_error ; printf("<%s> is not a LIMA CCD\n", "$1")
+        exit
+    }
+    _lima_debug_all(ccdname, 1)
+}'
+
+#%UU% <ccdname>
+#%MDESC%
+# De-activate ALL debug types and modules on given lima server
+#
+def limadebugoff '{
+    local ccdname
+    if ($# != 1) {
+        print "Usage: $0 <ccdname>"
+        exit
+    }
+    ccdname= "$1"
+    if (list_check(LIMA_DEV, ccdname)<=0) {
+        _lima_error ; printf("<%s> is not a LIMA CCD\n", "$1")
+        exit
+    }
+    _lima_debug_all(ccdname, 0)
+}'
+
+#%IU% (ccdname, onflag)
+# Activate or remove all debug modules and types on lima server of ccdname
+#
+def _lima_debug_all(ccdname, onflag) '{
+    local debmod debmods[]
+    local debtype debtypes[]
+
+    _lima_debug_get(ccdname, "debug_modules", debmods)
+    for (debmod in debmods) {
+        debmods[debmod]= onflag
+    }
+    _lima_debug_set(ccdname, "debug_modules", debmods)
+
+    _lima_debug_get(ccdname, "debug_types", debtypes)
+    for (debtype in debtypes) {
+        debtypes[debtype]= onflag
+    }
+    _lima_debug_set(ccdname, "debug_types", debtypes)
+}'
+
+#%UU% <ccdname> [ <DebugModule|-DebugModule> ... ]
+#%MDESC%
+#Get/Set Lima debug modules:
+#%BR%limadebugmodules <ccdname> will print out current debug modules
+#%BR%limadebugmodules <ccdname> <DebugModule1> <DebugModule2> will
+# activate debug modules <DebugModule1> <DebugModule2> without changing
+# other already active debug modules
+#%BR%limadebugmodules <ccdname> <-DebugModule1> will remove DebugModule1
+# from debug output stream
+#%BR%special key %B%All%B% or %B%-All%B% can be used to activate/remove
+# all debug modules (all or ALL works also)
+#%BR%Examples:
+#%BR% > limadebugmodules pcoedge All -Hardware : will activate all debug modules
+# except Harware ones
+#%BR% > limadebugmodules pcoedge -All Common Control : will remove all debug
+# modules and activate only Common and Control debug
+#
+def limadebugmodules '{
+    local ccdname narg args[]
+    if ($# == 0) {
+        print "Usage: $0 <ccdname> [ <DebugModule|-DebugModule> ... ]"
+        exit
+    }
+    ccdname= "$1"
+    if (list_check(LIMA_DEV, ccdname)<=0) {
+      _lima_error ; printf("<%s> is not a LIMA CCD\n", "$1")
+      exit
+    }
+    narg= split("$*", args)
+    _lima_debug(ccdname, "debug_modules", narg, args)
+}'
+
+#%UU% <ccdname> [ <DebugType|-DebugType> ... ]
+#%MDESC%
+#Get/Set Lima debug types:
+#%BR%limadebugtypes <ccdname> will print out current debug types
+#%BR%limadebugtypes <ccdname> <DebugType1> <DebugType2> will
+# activate debug types <DebugType> <DebugType> without changing
+# other already active debug types
+#%BR%limadebugtypes <ccdname> <-DebugType> will remove DebugType
+# from debug output stream
+#%BR%special key %B%All%B% or %B%-All%B% can be used to activate/remove
+# all debug types (all or ALL works also)
+#%BR%Examples:
+#%BR% > limadebugtypes pcoedge All -Trace : will activate all debug types
+# except Trace ones
+#%BR% > limadebugtypes pcoedge -All Warning Error : will remove all debug
+# modules and activate only Warning and Error debug
+#
+def limadebugtypes '{
+    local ccdname narg args[]
+    if ($# == 0) {
+        print "Usage: $0 <ccdname> [ <DebugType|-DebugType> ... ]"
+        exit
+    }
+    ccdname= "$1"
+    if (list_check(LIMA_DEV, ccdname)<=0) {
+      _lima_error ; printf("<%s> is not a LIMA CCD\n", "$1")
+      exit
+    }
+    narg= split("$*", args)
+    _lima_debug(ccdname, "debug_types", narg, args)
+}'
+
+   
+#%IU% (ccdname, attrname, narg, args) 
+#
+def _lima_debug(ccdname, attrname, narg, args) '{
+    local debvals[] debname debstate
+    local iarg
+
+    _lima_debug_get(ccdname, attrname, debvals)
+
+    if (narg > 1) {
+        for (iarg=1; iarg<narg; iarg++) {
+            if (substr(args[iarg], 1, 1)=="-") {
+                debname= substr(args[iarg], 2)
+                debstate= 0
+            } else {
+                debname= args[iarg]
+                debstate= 1
+            }
+            if ((debname == "All") || (debname == "ALL") || (debname == "all")) {
+                for (debname in debvals) {
+                    debvals[debname]= debstate
+                }
+            } else {
+                if (debname in debvals) {
+                    debvals[debname]= debstate
+                } else {
+                    printf("Invalid LIMA %s : %s\n", attrname, debname)
+                }
+            }
+        }
+        _lima_debug_set(ccdname, attrname, debvals)
+    }
+
+    printf("\nLIMA %s on <%s>:\n", attrname, ccdname)
+    for (name in debvals) {
+        printf(" - %15.15s : ", name)
+        tty_cntl("md")
+        printf("%s\n", debvals[name]==1 ? "YES" : "NO")
+        tty_cntl("me")
+    }
+}'
+
+
+#%IU% (ccdname, attrname, debvals)
+#
+def _lima_debug_get(ccdname, attrname, debvals) '{
+    local allvars[] vars[] dev allname
+    local nall iall nset iset
+
+    dev= LIMA_DEV[ccdname]["control"]
+    nset= tango_get(dev, attrname, vars)
+    if (TANGO_ERR == "API_EmptyDeviceAttribute") {
+        nset= 0
+    }
+    if ((nset==1)&&(vars["0"]=="")) {
+        nset= 0
+    }
+    allname= sprintf("%s_possible", attrname)
+    nall= tango_get(dev, allname, allvars)
+    if (TANGO_ERR == "API_EmptyDeviceAttribute") {
+        nall= 0
+    }
+    for (iall=0; iall<nall; iall++) {
+        debvals[allvars[iall]]= 0
+    }
+    for (iset=0; iset<nset; iset++) {
+        debvals[vars[iset]]= 1
+    }
+}'
+
+#%IU% (ccdname, attrname, debvals)
+#
+def _lima_debug_set(ccdname, attrname, debvals) '{
+    local vars[] dev name ivar
+    dev= LIMA_DEV[ccdname]["control"]
+
+    ivar= 0
+    for (name in debvals) {
+        if (debvals[name] == 1) {
+            vars[ivar]= name
+            ivar++
+        }
+    }
+    tango_put(dev, attrname, vars)
+}'
+
 #%MACROS%
 #%IMACROS%
 #%TOC%

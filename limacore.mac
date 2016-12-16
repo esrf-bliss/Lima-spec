@@ -143,12 +143,13 @@ def lima_addlimatype(limatype, setup_macro, menu_macro) '{
   }
 }'
  
-#%UU% <ccdname> <ccd_unit> <control_device>
+#%UU% <ccdname> <ccd_unit> <control_device> [<prepare_timeout>]
 #%MDESC%
 # Has to be called for each LIMA CCD you want to configure
 # %BR% %B%ccd_name%B% : user name to refer to your CCD in all macros
 # %BR% %B%ccd_unit%B% : ccd unit from spec config
 # %BR% %B%control_device%B% : lima control tango device (generic)
+# %BR% %B%prepare_timeout%B% [optionnal] : timeout for prepareAcq command
 #
 def limaccdsetup '{
   local ccdname limatype limacfg
@@ -161,6 +162,7 @@ def limaccdsetup '{
   list_add(LIMA_DEV, ccdname)
   LIMA_DEV[ccdname]["unit"]= int($2)
   LIMA_DEV[ccdname]["control"]= "$3"
+  LIMA_DEV[ccdname]["prepare_timeout"]= ($#==4) ? 1.*$4 : -1
 
   _lima_initconfig(ccdname)
 
@@ -1121,9 +1123,6 @@ def _limamenu_printtitle(ccdname, title, devtype) '{
 }'
 
 #%IU% (ccdname, parname, value, nl, option)
-#%MDESC%
-# option -1 print the item without the option number at the begining of the line.
-#         
 def _limamenu_printitem(ccdname, parname, value, nl, option) '{
   local arrname txt
   arrname= LIMA_DEV[ccdname]["arrname"]
@@ -1131,12 +1130,11 @@ def _limamenu_printitem(ccdname, parname, value, nl, option) '{
   if (!txt) txt= parname
   txt= txt " "
   while (length(txt)<35) { txt= txt "." }
-    if (option ==-1){
-      tty_move(5,nl, sprintf("     %s = \[md\]%s\[me\]", txt, value))
-    }
-    else{
-      tty_move(5,nl, sprintf("(%d) %s = \[md\]%s\[me\]", option, txt, value))
-    }
+  if (option ==-1){
+    tty_move(5,nl, sprintf("     %s = \[md\]%s\[me\]", txt, value))
+  } else {
+    tty_move(5,nl, sprintf("(%d) %s = \[md\]%s\[me\]", option, txt, value))
+  }
 }'
 
 jtdo ("lima/limatools")

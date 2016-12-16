@@ -360,15 +360,29 @@ def _limaacq_read(ccdname, framenr) '{
 # Prepare an acquisition of <nimg> frames with <expo> exposure time
 #
 def _limaacq_prepare(ccdname, expo, nimg) '{
-  local ret
+  local ret back_tout prep_tout
+
   _limapar_set(ccdname, "acq_nb_frames", nimg)
   _limapar_set(ccdname, "acq_expo_time", expo)
+
+  prep_tout= LIMA_DEV[ccdname]["prepare_timeout"]
+  if (prep_tout>0.) {
+      back_tout= tango_get(LIMA_DEV[ccdname]["control"], "timeout")
+      tango_put(LIMA_DEV[ccdname]["control"], "timeout", prep_tout)
+  }
+
   TANGO_ERR = -1
   ret = tango_io(LIMA_DEV[ccdname]["control"], "prepareAcq")
   if (ret == -1) {
     _lima_tango_error ccdname LIMA_DEV[ccdname]["control"]
+  }
+  if (prep_tout>0.) {
+      tango_put(LIMA_DEV[ccdname]["control"], "timeout", back_tout)
+  }
+  if (ret == -1) {
     return -1
   }
+
   _limaacq_arrayinit(ccdname)
   return 0
 }'

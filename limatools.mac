@@ -238,7 +238,7 @@ def limaset '{
     _limapar_printlist(ccdname, LP_WRITE)
   } else {
     local parsize partype value parname paridx arrname
-    local iarg narg args[]
+    local iarg narg args[] pars[]
 
     _limapar_checkarg(ccdname, "$2", pars)
 
@@ -348,10 +348,10 @@ def limamotsetup '{
     _limapar_printlist(ccdname, LP_MOT)
   }
 	else {
-    local motmne ccdname arrname parname paridx
+    local motmne ccdname arrname parname paridx pars[]
 
     ccdname= _lima_checkccdname("$1")
-    _limapar_checkarg(ccdname, "$2")
+    _limapar_checkarg(ccdname, "$2", pars)
 
     arrname= LIMA_DEV[ccdname]["arrname"]
     parname= pars["name"]
@@ -522,10 +522,10 @@ def limacntsetup '{
     _limapar_printlist(ccdname, LP_CNT)
   }
 	else {
-    local cntmne ccdname arrname parname paridx
+    local cntmne ccdname arrname parname paridx pars[]
 
     ccdname= _lima_checkccdname("$1")
-    _limapar_checkarg(ccdname, "$2")
+    _limapar_checkarg(ccdname, "$2", pars)
 
     arrname= LIMA_DEV[ccdname]["arrname"]
     parname= pars["name"]

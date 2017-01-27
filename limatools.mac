@@ -655,12 +655,14 @@ def _lima_debug_all(ccdname, onflag) '{
     for (debmod in debmods) {
         debmods[debmod]= onflag
     }
+    debmods["None"]=1
     _lima_debug_set(ccdname, "debug_modules", debmods)
 
     _lima_debug_get(ccdname, "debug_types", debtypes)
     for (debtype in debtypes) {
         debtypes[debtype]= onflag
     }
+    debtypes["Fatal"]=1
     _lima_debug_set(ccdname, "debug_types", debtypes)
 }'
 

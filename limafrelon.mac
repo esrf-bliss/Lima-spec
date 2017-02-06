@@ -4,8 +4,6 @@
 
 #%LOG%
 #
-#$Revision: $
-#
 
 def limafrelonsetup(ccdname) '{
 
@@ -117,4 +115,4 @@ def limafrelonmenu(ccdname) '{
 #%MACROS%
 #%IMACROS%
 #%TOC%
-#%AUTHOR% E.Papillon, $Revision: $, $Date: $
+#%AUTHOR% E.Papillon

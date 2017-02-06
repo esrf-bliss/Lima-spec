@@ -4,8 +4,6 @@
 
 #%LOG%
 #
-#$Revision: $
-#
 
 def limabaslersetup(ccdname) '{
 
@@ -30,4 +28,4 @@ def limabaslermenu(ccdname) '{
 #%MACROS%
 #%IMACROS%
 #%TOC%
-#%AUTHOR% S.Petitdemange, $Revision: $, $Date: $
+#%AUTHOR% S.Petitdemange

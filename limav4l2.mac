@@ -4,8 +4,6 @@
 
 #%LOG%
 #
-#$Revision: $
-#
 
 def limav4l2setup(ccdname) '{
 
@@ -49,4 +47,4 @@ def limav4l2menu(ccdname) '{
 #%MACROS%
 #%IMACROS%
 #%TOC%
-#%AUTHOR% L.Claustre, $Revision: $, $Date: $
+#%AUTHOR% L.Claustre

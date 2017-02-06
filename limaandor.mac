@@ -4,7 +4,6 @@
 
 #%LOG%
 #
-#$Revision: $
 #
 
 def limaandorsetup(ccdname) '{
@@ -129,4 +128,4 @@ def limaandormenu(ccdname) '{
 #%MACROS%
 #%IMACROS%
 #%TOC%
-#%AUTHOR% L.Claustre, $Revision: $, $Date: $
+#%AUTHOR% L.Claustre

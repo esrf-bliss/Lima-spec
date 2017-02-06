@@ -4,8 +4,6 @@
 
 #%LOG%
 #
-#$Revision: $
-#
 
 def limaimxpadsetup(ccdname) '{
 
@@ -207,4 +205,4 @@ def limaimxpadSaveConfig '{
 #%MACROS%
 #%IMACROS%
 #%TOC%
-#%AUTHOR% S.Petitdemange, $Revision: $, $Date: $
+#%AUTHOR% S.Petitdemange

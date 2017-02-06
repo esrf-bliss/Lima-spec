@@ -1,19 +1,10 @@
 #%NAME% 
 #  Specific macros for Lima Maxipix detector 
-# %BR% $Revision: 1.3 $ $Date: $
+# %BR%
 #
 #%CATEGORY% Detection, Ccd
 #
 #%END%
-
-#$Log: limampx.mac,v $
-#Revision 1.3  2010/11/22 16:53:11  claustre
-#corrected 2 options using same input key "33"
-#
-#Revision 1.2  2010/11/22 14:56:46  claustre
-#added RCS tags + woraround in limampx to force spec resync. on image format
-#change
-#
 
 def limampxsetup(ccdname) '{
 
@@ -144,4 +135,4 @@ def limampxmenu(ccdname) '{
 #%MACROS%
 #%IMACROS%
 #%TOC%
-#%AUTHOR% E.Papillon, $Revision: 1.3 $, $Date: 2010/11/22 16:53:11 $
+#%AUTHOR% E.Papillon

@@ -4,8 +4,6 @@
 
 #%LOG%
 #
-#$Revision: $
-#
 
 def limaueyesetup(ccdname) '{
 
@@ -49,4 +47,4 @@ def limaueyemenu(ccdname) '{
 #%MACROS%
 #%IMACROS%
 #%TOC%
-#%AUTHOR% L.Claustre, $Revision: $, $Date: $
+#%AUTHOR% L.Claustre

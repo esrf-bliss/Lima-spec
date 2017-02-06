@@ -10,16 +10,6 @@
 
 #%LOG%
 #
-#$Revision: 1.3 $
-#$Log: limaroi.mac,v $
-#Revision 1.3  2010/12/10 15:50:22  papillon
-#* correct xy orientation
-#
-#Revision 1.2  2010/11/22 14:56:46  claustre
-#added RCS tags + woraround in limampx to force spec resync. on image format
-#change
-#
-
 
 #%IU%
 #%MDESC%
@@ -805,4 +795,4 @@ def _limaroi_server_read(ccdname, frompt) '{
 #%MACROS%
 #%IMACROS%
 #%TOC%
-#%AUTHOR% E.Papillon, $Revision: 1.3 $, $Date: 2010/12/10 15:50:22 $
+#%AUTHOR% E.Papillon

@@ -32,15 +32,6 @@
 
 #%CATEGORY% Detection, Ccd
 
-#%LOG%
-#
-#$Revision: 1.2 $
-#$Log: limacore.mac,v $
-#Revision 1.2  2010/11/22 14:56:46  claustre
-#added RCS tags + woraround in limampx to force spec resync. on image format
-#change
-#
-
 #%IU%
 def _lima_error '{
   tty_cntl("md")
@@ -1145,4 +1136,4 @@ jtdo ("lima/limaprocess")
 #%MACROS%
 #%IMACROS%
 #%TOC%
-#%AUTHOR% E.Papillon, $Revision: 1.2 $, $Date: 2010/11/22 14:56:46 $
+#%AUTHOR% E.Papillon

@@ -7,15 +7,6 @@
 
 #%CATEGORY% Detection, Ccd
 
-#%LOG%
-#
-#$Revision: 1.2 $
-#$Log: limaacq.mac,v $
-#Revision 1.2  2010/11/22 14:56:46  claustre
-#added RCS tags + woraround in limampx to force spec resync. on image format
-#change
-#
-
 #%UU% <exposure_time> [<nb_frames>] [<interval_time>] [<display_rate>]
 #%MDESC%
 # Take a serie of images in multi-frame mode using active lima CCD device(s) (active lima ccd
@@ -610,4 +601,4 @@ def _limaacq_reset_common_header(ccdname) '{
 #%MACROS%
 #%IMACROS%
 #%TOC%
-#%AUTHOR% E.Papillon, $Revision: 1.2 $, $Date: 2010/11/22 14:56:46 $
+#%AUTHOR% E.Papillon

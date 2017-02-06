@@ -4,8 +4,6 @@
 
 #%LOG%
 #
-#$Revision: $
-#
 
 #=====================================================================
 #=====================================================================
@@ -36,4 +34,4 @@ def limaprosilicamenu(ccdname) '{
 #%MACROS%
 #%IMACROS%
 #%TOC%
-#%AUTHOR% E.Petitdemange, $Revision: $, $Date: $
+#%AUTHOR% E.Petitdemange

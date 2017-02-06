@@ -4,8 +4,6 @@
 
 #%LOG%
 #
-#$Revision: $
-#
 
 def limaperkinelmersetup(ccdname) '{
 
@@ -63,4 +61,4 @@ def limaperkinelmermenu(ccdname) '{
 #%MACROS%
 #%IMACROS%
 #%TOC%
-#%AUTHOR% E.Petitdemange, $Revision: $, $Date: $
+#%AUTHOR% E.Petitdemange

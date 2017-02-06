@@ -4,8 +4,6 @@
 
 #%LOG%
 #
-#$Revision: $
-#
 # 2016/05/18 rh
 # added new attributes
 #   - lastImgRecorded
@@ -185,4 +183,5 @@ def limapcomenu(ccdname) '{
 #%MACROS%
 #%IMACROS%
 #%TOC%
-#%AUTHOR% E.Petitdemange, $Revision: $, $Date: $
+#%AUTHOR% E.Petitdemange
+

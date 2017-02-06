@@ -4,9 +4,6 @@
 
 #%LOG%
 #
-#$Revision: $
-#
-
 
 ##########################    LIMA GURUS   DO NOT USE THIS FILE // DEV ONE IS ON loka.esrf.fr (bm05) ##################
 
@@ -90,4 +87,4 @@ def limapixiradmenu(ccdname) '{
 #%MACROS%
 #%IMACROS%
 #%TOC%
-#%AUTHOR% L.Claustre, $Revision: $, $Date: $
+#%AUTHOR% L.Claustre

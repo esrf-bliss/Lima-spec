@@ -4,8 +4,6 @@
 
 #%LOG%
 #
-#$Revision: $
-#
 
 def limasimulatorsetup(ccdname) '{
 
@@ -119,4 +117,4 @@ def limasimulatormenu(ccdname) '{
 #%MACROS%
 #%IMACROS%
 #%TOC%
-#%AUTHOR% A.Homs, $Revision: $, $Date: $
+#%AUTHOR% A.Homs

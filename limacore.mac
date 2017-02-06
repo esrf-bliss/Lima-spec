@@ -133,8 +133,8 @@ def lima_addlimatype(limatype, setup_macro, menu_macro) '{
     cdef("_limatype_menu", cmd, limatype)
   }
 }'
- 
-#%UU% <ccdname> <ccd_unit> <control_device> [<prepare_timeout>]
+
+#%UU% <ccd_name> <ccd_unit> <control_device> [<prepare_timeout>]
 #%MDESC%
 # Has to be called for each LIMA CCD you want to configure
 # %BR% %B%ccd_name%B% : user name to refer to your CCD in all macros
@@ -145,7 +145,7 @@ def lima_addlimatype(limatype, setup_macro, menu_macro) '{
 def limaccdsetup '{
   local ccdname limatype limacfg
   if ($# < 3) {
-    print "Usage: $0 <ccd_name> <ccd_unit> <control_device>"
+    print "Usage: $0 <ccd_name> <ccd_unit> <control_device> [<prepare_timeout>]"
     exit
   }
 

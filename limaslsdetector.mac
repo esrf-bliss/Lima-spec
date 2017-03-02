@@ -1,0 +1,62 @@
+#%NAME% 
+#  Specific macros for Lima SlsDetector 
+#%CATEGORY% Detection, Ccd
+
+#%LOG%
+#
+#$Revision: $
+#
+
+def limaslsdetectorsetup(ccdname) '{
+
+  # --- common control init
+  _limapar_controlinit(ccdname, 0)
+
+  # --- parameter definition
+  _limapar_addconfig(ccdname, "config_fname", LP_READ, 1)
+
+  # --- callback macro on parameter set
+  _limapar_addconfig_cb(ccdname, "_limaslsdetector_setpar")
+
+  # --- parameter description
+  _limapar_addtext(ccdname, "config_fname", "Configuration file name")
+}'
+
+lima_addlimatype("SlsDetector", "limaslsdetectorsetup", "limaslsdetectormenu")
+
+def _limaslsdetector_setpar(ccdname, parname, value) '{
+  #_lima_trace ccdname; printf("CB on <%s>\n", parname)
+}'
+
+def limaslsdetectormenu(ccdname) '{
+  local items[] parname
+  local nl option
+
+  items["config_fname"] = "<empty>"
+
+  option= 1
+
+  while (option) {
+
+    for (parname in items) {
+      items[parname]= _limapar_get(ccdname, parname)
+    }
+
+    nl= _limamenu_printtitle(ccdname, "Configuration", "config")
+
+    tty_move(0, nl++, "(1) Information :")
+    _limamenu_printitem(ccdname, "config_fname", items["config_fname"], nl++, 11)
+    ++nl
+
+    tty_move(0, nl++, "(2) Configuration :")
+    nl++
+
+    option= getval("\n\n\tOption ---> ", 0)
+    printf("\n\n")
+
+  }
+}'
+#%MACROS%
+#%IMACROS%
+#%TOC%
+#%AUTHOR% A. Homs, $Revision: $, $Date: $

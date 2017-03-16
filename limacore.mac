@@ -596,6 +596,8 @@ def _limapar_controlinit(ccdname, version) '{
   _limapar_addcontrol(ccdname, "saving_overwrite_policy", LP_RW|LP_LIST, 1)
   _limapar_addcontrol(ccdname, "saving_header_delimiter", LP_RW, 3)
   _limapar_addcontrol(ccdname, "saving_common_header", LP_RW, 65535)
+  _limapar_addcontrol(ccdname, "saving_statistics", LP_READ, 4)
+  _limapar_addcontrol(ccdname, "saving_statistics_history", LP_RW, 1)
 
   _limapar_addtext(ccdname, "saving_mode", "Saving mode")
   _limapar_addtext(ccdname, "saving_format", "Saving file format")
@@ -608,6 +610,8 @@ def _limapar_controlinit(ccdname, version) '{
   _limapar_addtext(ccdname, "saving_overwrite_policy", "File overwriting policy")
   _limapar_addtext(ccdname, "saving_header_delimiter", "Delimiter used in file headers")
   _limapar_addtext(ccdname, "saving_common_header", "Common header added to all files")
+  _limapar_addtext(ccdname, "saving_statistics", "Saving stats : writing, compression, comp.ratio, incoming speeds")
+  _limapar_addtext(ccdname, "saving_statistics_history", "Saving stats history size")
 
   # --- video
   _limapar_addcontrol(ccdname, "video_live", LP_RW|LP_LIST, 1)

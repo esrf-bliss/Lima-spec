@@ -607,6 +607,38 @@ def _limacnt_getcounts '{
 }'
 
 # -----------------------------------------------------------------------------
+# WRITE STATS UTILS
+# -----------------------------------------------------------------------------
+
+#%UU% <ccdname>
+#%MDESC%
+# Print out write speed statistics
+#
+def limastat '{
+    local ccdname hlen nval
+    if ($# != 1) {
+        print "Usage: $0 <ccdname>"
+        exit
+    }
+    ccdname= _lima_checkccdname("$1")
+    hlen= _limapar_get(ccdname, "saving_statistics_history")
+    nval= _limapar_get(ccdname, "saving_statistics", -1)
+    if (nval == 4) {
+        _lima_trace ccdname
+        printf("Saving statistics (history max=%d)\n", hlen)
+        printf("* write speed       = %.2f MB/sec\n", LIMA_VALS[0]/1024./1024.)
+        printf("* compression speed = %.2f MB/sec\n", LIMA_VALS[1]/1024./1024.)
+        printf("* compression ratio = %.3f\n", LIMA_VALS[2])
+        printf("* incoming speed    = %.2f MB/sec\n", LIMA_VALS[3]/1024./1024.)
+    } else {
+        _lima_error ccdname
+        printf("Could not read statistics\n")
+    }
+}'
+        
+    
+
+# -----------------------------------------------------------------------------
 # DEBUG UTILS
 # -----------------------------------------------------------------------------
 
@@ -649,12 +681,14 @@ def _lima_debug_all(ccdname, onflag) '{
     for (debmod in debmods) {
         debmods[debmod]= onflag
     }
+    debmods["None"]=1
     _lima_debug_set(ccdname, "debug_modules", debmods)
 
     _lima_debug_get(ccdname, "debug_types", debtypes)
     for (debtype in debtypes) {
         debtypes[debtype]= onflag
     }
+    debtypes["Fatal"]=1
     _lima_debug_set(ccdname, "debug_types", debtypes)
 }'
 

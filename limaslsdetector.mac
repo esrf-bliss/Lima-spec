@@ -14,6 +14,9 @@ def limaslsdetectorsetup(ccdname) '{
 
   # --- parameter definition
   _limapar_addconfig(ccdname, "config_fname", LP_READ, 1)
+  _limapar_addconfig(ccdname, "hostname_list", LP_READ, 64)
+
+  _limapar_addconfig(ccdname, "raw_mode", LP_RW|LP_CB, 1)
 
   _limapar_addconfig(ccdname, "high_voltage", LP_RW, 1)
   _limapar_addconfig(ccdname, "threshold_energy", LP_RW, 1)
@@ -23,6 +26,9 @@ def limaslsdetectorsetup(ccdname) '{
 
   # --- parameter description
   _limapar_addtext(ccdname, "config_fname", "Configuration file name")
+  _limapar_addtext(ccdname, "hostname_list", "Modules host names")
+
+  _limapar_addtext(ccdname, "raw_mode", "Read raw image")
 
   _limapar_addtext(ccdname, "high_voltage", "High Voltage (V)")
   _limapar_addtext(ccdname, "threshold_energy", "Threshold Energy (eV)")
@@ -31,14 +37,25 @@ def limaslsdetectorsetup(ccdname) '{
 lima_addlimatype("SlsDetector", "limaslsdetectorsetup", "limaslsdetectormenu")
 
 def _limaslsdetector_setpar(ccdname, parname, value) '{
-  #_lima_trace ccdname; printf("CB on <%s>\n", parname)
+  if (parname == "raw_mode") {
+    # inform SPEC about possible image type/size change
+    local unit
+    unit = LIMA_DEV[ccdname]["unit"]
+    # need to call twice "resize" otherwise spec does update
+    # the image_par() parameters (row_end,row_beg,col_end,col_beg) 
+    image_par(unit, "resize")
+    image_par(unit, "resize")
+    ccd_createarray unit
+  }
 }'
 
 def limaslsdetectormenu(ccdname) '{
-  local items[] parname
+  local items[] parname i aux_s aux_n
   local nl option
 
   items["config_fname"] = ""
+  items["hostname_list"] = ""
+  items["raw_mode"] = ""
   items["high_voltage"] = -1
   items["threshold_energy"] = -2
 
@@ -47,33 +64,53 @@ def limaslsdetectormenu(ccdname) '{
   while (option) {
 
     for (parname in items) {
-      items[parname]= _limapar_get(ccdname, parname)
+      if (parname == "hostname_list") {
+        aux_n = _limapar_get(ccdname, parname, -1)
+        aux_s = ""
+        for (i = 0; i < aux_n; i++)
+          aux_s = sprintf("%s%s%s", aux_s, i ? " " : "", LIMA_VALS[i])
+        items[parname] = aux_s
+      } else {
+        items[parname] = _limapar_get(ccdname, parname)
+	if (parname == "raw_mode")
+          items[parname] = items[parname] ? "Yes" : "No"
+      }
     }
 
-    nl = _limamenu_printtitle(ccdname, "Configuration", "config")
+    nl = _limamenu_printtitle(ccdname, "Information", "config")
 
-    tty_move(0, nl++, "(1) Configuration:")
+    tty_move(0, nl++, "(1) Information:")
     _limamenu_printitem(ccdname, "config_fname", items["config_fname"], \
 			nl++, 11)
+    _limamenu_printitem(ccdname, "hostname_list", items["hostname_list"], \
+			nl++, 12)
     nl++
 
-    tty_move(0, nl++, "(2) Calibration:")
-    _limamenu_printitem(ccdname, "high_voltage", items["high_voltage"], \
+    tty_move(0, nl++, "(2) Configuration:")
+    _limamenu_printitem(ccdname, "raw_mode", items["raw_mode"], \
 			nl++, 21)
+    nl++
+
+    tty_move(0, nl++, "(3) Calibration:")
+    _limamenu_printitem(ccdname, "high_voltage", items["high_voltage"], \
+			nl++, 31)
     _limamenu_printitem(ccdname, "threshold_energy", items["threshold_energy"],\
- 			nl++, 22)
+ 			nl++, 32)
     nl++
 
     option = getval("\n\n\tOption ---> ", 0)
     printf("\n\n")
 
     if ((option == 2) || (option == 21))
+      _limapar_ask(ccdname, "raw_mode", (items["raw_mode"] == "Yes"))
+
+    if ((option == 3) || (option == 31))
       _limapar_ask(ccdname, "high_voltage", items["high_voltage"])
-    if ((option == 2) || (option == 22))
+    if ((option == 3) || (option == 32))
       _limapar_ask(ccdname, "threshold_energy", items["threshold_energy"])
   }
 }'
 #%MACROS%
 #%IMACROS%
 #%TOC%
-#%AUTHOR% A. Homs, $Revision: $, $Date: $
+#%AUTHOR% A. Homs, $Revision: $, $Date: 2017/04 $

@@ -7,7 +7,8 @@
 #$Revision: $
 #
 
-def limaslsdetectorsetup(ccdname) '{
+def _limaslsdetector_setup(ccdname) '{
+  local aux_n aux_s aux_d i
 
   # --- common control init
   _limapar_controlinit(ccdname, 0)
@@ -15,10 +16,11 @@ def limaslsdetectorsetup(ccdname) '{
   # --- parameter definition
   _limapar_addconfig(ccdname, "config_fname", LP_READ, 1)
   _limapar_addconfig(ccdname, "hostname_list", LP_READ, 64)
+  _limapar_addconfig(ccdname, "dac_name_list", LP_READ, 64)
+  _limapar_addconfig(ccdname, "adc_name_list", LP_READ, 64)
 
   _limapar_addconfig(ccdname, "raw_mode", LP_RW|LP_CB, 1)
 
-  _limapar_addconfig(ccdname, "high_voltage", LP_RW, 1)
   _limapar_addconfig(ccdname, "threshold_energy", LP_RW, 1)
 
   # --- callback macro on parameter set
@@ -30,11 +32,45 @@ def limaslsdetectorsetup(ccdname) '{
 
   _limapar_addtext(ccdname, "raw_mode", "Read raw image")
 
-  _limapar_addtext(ccdname, "high_voltage", "High Voltage (V)")
   _limapar_addtext(ccdname, "threshold_energy", "Threshold Energy (eV)")
+
+  # --- DACs
+  aux_n = _limapar_get(ccdname, "dac_name_list", -1)
+  for (i = 0; i < aux_n; i++) {
+    aux_s = LIMA_VALS[i]
+    aux_d = sprintf("DAC %s (AU)", substr(aux_s, 5))
+    if (aux_s == "dac_HVNew")
+      aux_d = "High Voltage (V)"
+    _limapar_addconfig(ccdname, aux_s, LP_RW, 64)
+    _limapar_addtext(ccdname, aux_s, aux_d)
+  }
+
+  # --- ADCs
+  aux_n = _limapar_get(ccdname, "adc_name_list", -1)
+  for (i = 0; i < aux_n; i++) {
+    aux_s = LIMA_VALS[i]
+    aux_d = sprintf("ADC %s", substr(aux_s, 5))
+    _limapar_addconfig(ccdname, aux_s, LP_RW, 64)
+    _limapar_addtext(ccdname, aux_s, aux_d)
+  }
+
 }'
 
-lima_addlimatype("SlsDetector", "limaslsdetectorsetup", "limaslsdetectormenu")
+cdef("_limapar_set_pre_hook",  "_limaslsdetector_pre_par_set\n",  "slsdetector")
+cdef("_limapar_set_post_hook", "_limaslsdetector_post_par_set\n", "slsdetector")
+
+lima_addlimatype("SlsDetector", "_limaslsdetector_setup", \
+                                "_limaslsdetector_menu")
+
+def _limaslsdetector_pre_par_set '{
+  if (LIMA_DEV[ccdname]["type"] == "SlsDetector") {
+  }
+}'
+
+def _limaslsdetector_post_par_set '{
+  if (LIMA_DEV[ccdname]["type"] == "SlsDetector") {
+  }
+}'
 
 def _limaslsdetector_setpar(ccdname, parname, value) '{
   if (parname == "raw_mode") {
@@ -49,32 +85,32 @@ def _limaslsdetector_setpar(ccdname, parname, value) '{
   }
 }'
 
-def limaslsdetectormenu(ccdname) '{
-  local items[] parname i aux_s aux_n
+def _limaslsdetector_menu(ccdname) '{
+  local items[] aitems[] parname i aux_s aux_n
   local nl option
 
   items["config_fname"] = ""
-  items["hostname_list"] = ""
   items["raw_mode"] = ""
-  items["high_voltage"] = -1
   items["threshold_energy"] = -2
+
+  aitems["hostname_list"] = ""
+  aitems["dac_HVNew"] = ""
 
   option = 1
 
   while (option) {
-
     for (parname in items) {
-      if (parname == "hostname_list") {
-        aux_n = _limapar_get(ccdname, parname, -1)
-        aux_s = ""
-        for (i = 0; i < aux_n; i++)
-          aux_s = sprintf("%s%s%s", aux_s, i ? " " : "", LIMA_VALS[i])
-        items[parname] = aux_s
-      } else {
-        items[parname] = _limapar_get(ccdname, parname)
-	if (parname == "raw_mode")
-          items[parname] = items[parname] ? "Yes" : "No"
-      }
+      items[parname] = _limapar_get(ccdname, parname)
+      if (parname == "raw_mode")
+        items[parname] = items[parname] ? "Yes" : "No"
+    }
+
+    for (parname in aitems) {
+      aux_n = _limapar_get(ccdname, parname, -1)
+      aux_s = ""
+      for (i = 0; i < aux_n; i++)
+        aux_s = sprintf("%s%s%8s", aux_s, i ? " " : "", LIMA_VALS[i])
+      aitems[parname] = sprintf("[ %s ]", aux_s)
     }
 
     nl = _limamenu_printtitle(ccdname, "Information", "config")
@@ -82,7 +118,7 @@ def limaslsdetectormenu(ccdname) '{
     tty_move(0, nl++, "(1) Information:")
     _limamenu_printitem(ccdname, "config_fname", items["config_fname"], \
 			nl++, 11)
-    _limamenu_printitem(ccdname, "hostname_list", items["hostname_list"], \
+    _limamenu_printitem(ccdname, "hostname_list", aitems["hostname_list"], \
 			nl++, 12)
     nl++
 
@@ -92,10 +128,13 @@ def limaslsdetectormenu(ccdname) '{
     nl++
 
     tty_move(0, nl++, "(3) Calibration:")
-    _limamenu_printitem(ccdname, "high_voltage", items["high_voltage"], \
+    _limamenu_printitem(ccdname, "dac_HVNew", aitems["dac_HVNew"], \
 			nl++, 31)
     _limamenu_printitem(ccdname, "threshold_energy", items["threshold_energy"],\
  			nl++, 32)
+    nl++
+
+    tty_move(0, nl++, "(4) Monitoring .............................. >>")
     nl++
 
     option = getval("\n\n\tOption ---> ", 0)
@@ -105,11 +144,88 @@ def limaslsdetectormenu(ccdname) '{
       _limapar_ask(ccdname, "raw_mode", (items["raw_mode"] == "Yes"))
 
     if ((option == 3) || (option == 31))
-      _limapar_ask(ccdname, "high_voltage", items["high_voltage"])
+      _limaslsdetector_ask_dac(ccdname, "dac_HVNew", -1)
+
     if ((option == 3) || (option == 32))
       _limapar_ask(ccdname, "threshold_energy", items["threshold_energy"])
+
+    if (option == 4)
+      _limaslsdetector_monitor_menu(ccdname)
   }
 }'
+
+def _limaslsdetector_nb_det_modules(ccdname) '{
+  return _limapar_get(ccdname, "hostname_list", -1)
+}'
+
+def _limaslsdetector_set_dac(ccdname, parname, idx, val) '{
+  local devname nbdet alen aidx
+  devname = _limapar_getdevname(ccdname, parname)
+  nbdet = _limaslsdetector_nb_det_modules(ccdname)
+
+  alen = (idx >= 0) ? nbdet : 1
+  aidx = (idx >= 0) ? idx : 0
+  long array darr[alen]
+  darr = -1
+  darr[aidx] = val
+  printf("Setting DAC ...\n")
+  tango_put(devname, parname, darr)
+  sleep(1)
+}'
+
+def _limaslsdetector_ask_dac(ccdname, parname, idx) '{
+  local arrname txt val
+  arrname = LIMA_DEV[ccdname]["arrname"]
+  txt = @arrname[parname]["desc"]
+  val = getval(txt, 0)
+  _limaslsdetector_set_dac(ccdname, parname, idx, val)
+}'
+
+def _limaslsdetector_monitor_menu(ccdname) '{
+  local items[] parname i adc_n adc_name[] aux_n aux_s aux_f is_adc
+  local nl option
+
+  adc_n = _limapar_get(ccdname, "adc_name_list", -1)
+  for (i = 0; i < adc_n; i++) {
+    adc_name[i] = LIMA_VALS[i]
+    items[adc_name[i]] = ""
+  }
+
+  items["hostname_list"] = ""
+
+  option = 1
+
+  while (option) {
+    for (parname in items) {
+      aux_n = _limapar_get(ccdname, parname, -1)
+      is_adc = (substr(parname, 1, 3) == "adc")
+      aux_f = sprintf("%%s%%s%s", is_adc ? "%8.2f" : "%8s")
+      aux_s = ""
+      for (i = 0; i < aux_n; i++)
+        aux_s = sprintf(aux_f, aux_s, i ? " " : "", LIMA_VALS[i])
+      items[parname] = sprintf("[ %s ]", aux_s)
+    }
+
+    nl = _limamenu_printtitle(ccdname, "Monitoring", "config")
+
+    tty_move(0, nl++, "(1) Information:")
+    _limamenu_printitem(ccdname, "hostname_list", items["hostname_list"], \
+			nl++, 101)
+    nl++
+
+    tty_move(0, nl++, "(2) ADC status:")
+    option = 201
+    for (i = 0; i < adc_n; i++) {
+      parname = adc_name[i]
+      _limamenu_printitem(ccdname, parname, items[parname], nl++, option++)
+    }
+
+    option = getval("\n\n\tOption ---> ", 0)
+    printf("\n\n")
+  }
+}'
+
+
 #%MACROS%
 #%IMACROS%
 #%TOC%

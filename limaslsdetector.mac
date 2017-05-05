@@ -23,6 +23,9 @@ def _limaslsdetector_setup(ccdname) '{
   _limapar_addconfig(ccdname, "raw_mode", LP_RW|LP_CB, 1)
   _limapar_addconfig(ccdname, "show_mv", LP_RW, 1)
 
+  _limapar_addconfig(ccdname, "clock_div", LP_RW|LP_LIST, 1)
+  _limapar_addconfig(ccdname, "readout_flags", LP_RW|LP_LIST, 1)
+
   _limapar_addconfig(ccdname, "threshold_energy", LP_RW, 1)
 
   # --- callback macro on parameter set
@@ -35,8 +38,11 @@ def _limaslsdetector_setup(ccdname) '{
   _limapar_addtext(ccdname, "dac_name_list_mv", "mV DAC names")
   _limapar_addtext(ccdname, "adc_name_list", "ADC names")
 
-  _limapar_addtext(ccdname, "raw_mode", "Remain at Raw Image level")
+  _limapar_addtext(ccdname, "raw_mode", "Raw Image Mode")
   _limapar_addtext(ccdname, "show_mv", "Show DAC values in mili-volts")
+
+  _limapar_addtext(ccdname, "clock_div", "Speed Clock Divider")
+  _limapar_addtext(ccdname, "readout_flags", "Readout Flags")
 
   _limapar_addtext(ccdname, "threshold_energy", "Threshold Energy (eV)")
 
@@ -106,6 +112,8 @@ def _limaslsdetector_menu(ccdname) '{
 
   items["config_fname"] = ""
   items["raw_mode"] = ""
+  items["clock_div"] = ""
+  items["readout_flags"] = ""
   items["threshold_energy"] = -2
 
   aitems["hostname_list"] = ""
@@ -140,6 +148,10 @@ def _limaslsdetector_menu(ccdname) '{
     tty_move(0, nl++, "(2) Configuration:")
     _limamenu_printitem(ccdname, "raw_mode", items["raw_mode"], \
 			nl++, 21)
+    _limamenu_printitem(ccdname, "clock_div", items["clock_div"], \
+			nl++, 22)
+    _limamenu_printitem(ccdname, "readout_flags", items["readout_flags"], \
+			nl++, 23)
     nl++
 
     tty_move(0, nl++, "(3) Calibration:")
@@ -158,6 +170,10 @@ def _limaslsdetector_menu(ccdname) '{
 
     if ((option == 2) || (option == 21))
       _limapar_ask(ccdname, "raw_mode", (items["raw_mode"] == "Yes"))
+    if ((option == 2) || (option == 22))
+      _limapar_ask(ccdname, "clock_div", items["clock_div"])
+    if ((option == 2) || (option == 23))
+      _limapar_ask(ccdname, "readout_flags", items["readout_flags"])
 
     if ((option == 3) || (option == 31)) {
       _limaslsdetector_ask_dac(ccdname, "dac_HVNew", -1)

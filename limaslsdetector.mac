@@ -20,6 +20,7 @@ def _limaslsdetector_setup(ccdname) '{
   _limapar_addconfig(ccdname, "dac_name_list_mv", LP_READ, 64)
   _limapar_addconfig(ccdname, "adc_name_list", LP_READ, 64)
 
+  _limapar_addconfig(ccdname, "pixel_depth", LP_RW|LP_LIST|LP_CB, 1)
   _limapar_addconfig(ccdname, "raw_mode", LP_RW|LP_CB, 1)
   _limapar_addconfig(ccdname, "show_mv", LP_RW, 1)
 
@@ -38,6 +39,7 @@ def _limaslsdetector_setup(ccdname) '{
   _limapar_addtext(ccdname, "dac_name_list_mv", "mV DAC names")
   _limapar_addtext(ccdname, "adc_name_list", "ADC names")
 
+  _limapar_addtext(ccdname, "pixel_depth", "Image Pixel Depth")
   _limapar_addtext(ccdname, "raw_mode", "Raw Image Mode")
   _limapar_addtext(ccdname, "show_mv", "Show DAC values in milli-volts")
 
@@ -94,7 +96,7 @@ def _limaslsdetector_post_par_set '{
 }'
 
 def _limaslsdetector_setpar(ccdname, parname, value) '{
-  if (parname == "raw_mode") {
+  if ((parname == "pixel_depth") || (parname == "raw_mode")) {
     # inform SPEC about possible image type/size change
     local unit
     unit = LIMA_DEV[ccdname]["unit"]
@@ -107,10 +109,11 @@ def _limaslsdetector_setpar(ccdname, parname, value) '{
 }'
 
 def _limaslsdetector_menu(ccdname) '{
-  local items[] aitems[] parname i aux_s aux_n
+  local items[] aitems[] parname i aux_s aux_n val
   local nl option
 
   items["config_fname"] = ""
+  items["pixel_depth"] = ""
   items["raw_mode"] = ""
   items["clock_div"] = ""
   items["readout_flags"] = ""
@@ -146,12 +149,14 @@ def _limaslsdetector_menu(ccdname) '{
     nl++
 
     tty_move(0, nl++, "(2) Configuration:")
-    _limamenu_printitem(ccdname, "raw_mode", items["raw_mode"], \
+    _limamenu_printitem(ccdname, "pixel_depth", items["pixel_depth"], \
 			nl++, 21)
-    _limamenu_printitem(ccdname, "clock_div", items["clock_div"], \
+    _limamenu_printitem(ccdname, "raw_mode", items["raw_mode"], \
 			nl++, 22)
-    _limamenu_printitem(ccdname, "readout_flags", items["readout_flags"], \
+    _limamenu_printitem(ccdname, "clock_div", items["clock_div"], \
 			nl++, 23)
+    _limamenu_printitem(ccdname, "readout_flags", items["readout_flags"], \
+			nl++, 24)
     nl++
 
     tty_move(0, nl++, "(3) Calibration:")
@@ -169,10 +174,15 @@ def _limaslsdetector_menu(ccdname) '{
     printf("\n\n")
 
     if ((option == 2) || (option == 21))
-      _limapar_ask(ccdname, "raw_mode", (items["raw_mode"] == "Yes"))
-    if ((option == 2) || (option == 22))
-      _limapar_ask(ccdname, "clock_div", items["clock_div"])
+      _limapar_ask(ccdname, "pixel_depth", items["pixel_depth"])
+    if ((option == 2) || (option == 22)) {
+      val = (items["raw_mode"] == "Yes")
+      if (yesno("Raw Image Mode", val) != val)
+        _limapar_set(ccdname, "raw_mode", !val)
+    }
     if ((option == 2) || (option == 23))
+      _limapar_ask(ccdname, "clock_div", items["clock_div"])
+    if ((option == 2) || (option == 24))
       _limapar_ask(ccdname, "readout_flags", items["readout_flags"])
 
     if ((option == 3) || (option == 31)) {

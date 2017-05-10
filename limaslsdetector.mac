@@ -177,7 +177,7 @@ def _limaslsdetector_menu(ccdname) '{
 
     if ((option == 3) || (option == 31)) {
       _limaslsdetector_ask_dac(ccdname, "dac_HVNew", -1)
-      getval("Type Enter to continue ...", "")
+      input("Type Enter to continue ...")
     }
 
     if ((option == 3) || (option == 32))
@@ -228,13 +228,32 @@ def _limaslsdetector_set_dac(ccdname, parname, idx, val) '{
 }'
 
 def _limaslsdetector_ask_dac(ccdname, parname, idx) '{
-  local arrname txt val
-  arrname = LIMA_DEV[ccdname]["arrname"]
-  txt = @arrname[parname]["desc"]
-  val = getval(txt, 0)
+  local arrname txt val val2 new_val all_eq aux_n i
+
   if (idx == -2)
     idx = getval("Module index to apply DAC on [-1=All]", -1)
-  _limaslsdetector_set_dac(ccdname, parname, idx, val)
+  val = _limapar_get(ccdname, parname, idx)
+  if (idx < 0) {
+    aux_n = val
+    val = val2 = 0
+    for (i = 0; i < aux_n; i++) {
+      val += LIMA_VALS[i]
+      val2 += pow(LIMA_VALS[i], 2)
+    }
+    all_eq = (val2 == pow(val, 2) / aux_n)
+    val = int(val / aux_n)
+  }
+  arrname = LIMA_DEV[ccdname]["arrname"]
+  txt = @arrname[parname]["desc"]
+  new_val = getval(txt, val)
+  if ((new_val < 0) || \
+      ((new_val == val) && \
+       ((idx >= 0) || all_eq || !yesno("Apply value to all modules", 0)))) {
+    printf("Skipping %s write\n", txt)
+    return
+  }
+
+  _limaslsdetector_set_dac(ccdname, parname, idx, new_val)
 }'
 
 def _limaslsdetector_dac_menu(ccdname) '{
@@ -305,7 +324,7 @@ def _limaslsdetector_dac_menu(ccdname) '{
       i = option - foption
       parname = dac_name[i]
       _limaslsdetector_ask_dac(ccdname, parname, -2)
-      getval("Type Enter to continue ...", "")
+      input("Type Enter to continue ...")
     }
   }
 }'

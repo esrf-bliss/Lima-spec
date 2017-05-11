@@ -379,7 +379,7 @@ def _limaslsdetector_monitor_menu(ccdname) '{
       aux_s = ""
       for (i = 0; i < aux_n; i++)
         aux_s = sprintf(aux_f, aux_s, i ? " " : "", LIMA_VALS[i])
-      items[parname] = sprintf("[ %s ]", aux_s)
+      items[parname] = sprintf("%s[ %s ]", is_adc ? "" : " ", aux_s)
     }
 
     nl = _limamenu_printtitle(ccdname, "Monitoring", "config")

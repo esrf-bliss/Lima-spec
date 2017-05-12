@@ -401,6 +401,59 @@ def _limaslsdetector_monitor_menu(ccdname) '{
   }
 }'
 
+def slsdetmot_config(mnum, type, unit, module, channel) '{
+  local ccdname
+
+  ccdname = slsdetmot_ADDR
+  if (type == "ctrl") {
+    printf("Using Lima SlsDetector motor on %s\n", ccdname)
+  }
+
+}'
+
+def slsdetmot_cmd(mnum, cmd, p1, p2) '{
+  local parname ccdname devname is_dac is_trim is_arr val
+
+  if (mnum == "..")
+    return 0
+
+  ccdname = motor_par(mnum, "address")
+  parname = motor_par(mnum, "name")
+  idx = motor_par(mnum, "idx")
+
+  devname = _limapar_getdevname(ccdname, parname)
+
+  is_dac = (substr(parname, 1, 3) == "dac")
+  is_trim = (parname == "all_trim_bits")
+  is_arr = (is_dac || is_trim)
+
+  if (cmd == "status")
+    return 0
+
+  if (cmd == "position") {
+    aux_n = _limapar_get(ccdname, parname, idx)
+    if (!is_arr)
+      return aux_n
+
+    val = 0
+    for (i = 0; i < aux_n; i++)
+      val += LIMA_VALS[i]
+    return val / aux_n
+  }
+
+  if (cmd == "start_one") {
+    if (is_arr) {
+      ulong array arr[1]
+      arr[0] = p1
+      tango_put(devname, parname, arr)
+      sleep(1)
+    } else {
+      _limapar_set(ccdname, parname, p1)
+    }
+  }
+
+}'
+
 
 #%MACROS%
 #%IMACROS%

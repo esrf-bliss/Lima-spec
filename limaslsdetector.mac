@@ -412,7 +412,7 @@ def slsdetmot_config(mnum, type, unit, module, channel) '{
 }'
 
 def slsdetmot_cmd(mnum, cmd, p1, p2) '{
-  local parname ccdname devname is_dac is_trim is_arr val
+  local parname ccdname devname is_dac is_trim is_arr val aux_n
 
   if (mnum == "..")
     return 0
@@ -425,7 +425,7 @@ def slsdetmot_cmd(mnum, cmd, p1, p2) '{
 
   is_dac = (substr(parname, 1, 3) == "dac")
   is_trim = (parname == "all_trim_bits")
-  is_arr = (is_dac || is_trim)
+  is_arr = (is_dac || is_trim) && (idx == -1)
 
   if (cmd == "status")
     return 0

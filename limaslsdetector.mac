@@ -39,7 +39,7 @@ def _limaslsdetector_setup(ccdname) '{
   _limapar_addtext(ccdname, "adc_name_list", "ADC names")
 
   _limapar_addtext(ccdname, "raw_mode", "Raw Image Mode")
-  _limapar_addtext(ccdname, "show_mv", "Show DAC values in mili-volts")
+  _limapar_addtext(ccdname, "show_mv", "Show DAC values in milli-volts")
 
   _limapar_addtext(ccdname, "clock_div", "Speed Clock Divider")
   _limapar_addtext(ccdname, "readout_flags", "Readout Flags")

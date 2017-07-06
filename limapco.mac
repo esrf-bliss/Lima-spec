@@ -20,14 +20,42 @@ def limapcosetup(ccdname) '{
   _limapar_controlinit(ccdname, 0)
 
   # --- parameter definition & description
-  _limapar_addconfig(ccdname, "lastError",LP_READ,1)
-  _limapar_addtext(ccdname, "lastError", "Pco last error")
+
+  #_limapar_addconfig(ccdname, "acqTimeoutRetry",LP_RW,1)
+  #_limapar_addtext(ccdname, "acqTimeoutRetry", "acq Timeout Retry (for debug only!)")
+
+  _limapar_addconfig(ccdname, "adc",LP_RW,1)
+  _limapar_addtext(ccdname, "adc", "Number of present working ADC")
+
+  _limapar_addconfig(ccdname, "adcMax",LP_READ,1)
+  _limapar_addtext(ccdname, "adcMax", "Max. number of available ADC")
+
+  _limapar_addconfig(ccdname, "binInfo",LP_READ,1)
+  _limapar_addtext(ccdname, "binInfo", "BIN Info")
+
+  _limapar_addconfig(ccdname, "bytesPerPixel",LP_READ,1)
+  _limapar_addtext(ccdname, "bytesPerPixel", "Image Bytes Per Pixel")
+
+  _limapar_addconfig(ccdname, "camerasFound",LP_READ,1)
+  _limapar_addtext(ccdname, "camerasFound", "Pco Cameras found during Open search")
 
   _limapar_addconfig(ccdname, "camInfo",LP_READ,1)
   _limapar_addtext(ccdname, "camInfo", "general cam info")
 
+  _limapar_addconfig(ccdname, "camName",LP_READ,1)
+  _limapar_addtext(ccdname, "camName", "Camera Name")
+
+  _limapar_addconfig(ccdname, "camNameBase",LP_READ,1)
+  _limapar_addtext(ccdname, "camNameBase", "Camera Name (base)")
+
+  _limapar_addconfig(ccdname, "camNameEx",LP_READ,1)
+  _limapar_addtext(ccdname, "camNameEx", "Camera Name (extended)")
+
   _limapar_addconfig(ccdname, "camType",LP_READ,1)
   _limapar_addtext(ccdname, "camType", "cam type")
+
+  _limapar_addconfig(ccdname, "cdiMode",LP_RW,1)
+  _limapar_addtext(ccdname, "cdiMode", "CDI (only some PCO cameras)")
 
   _limapar_addconfig(ccdname, "clXferPar",LP_READ,1)
   _limapar_addtext(ccdname, "clXferPar", "cameraLink transfer parameters")
@@ -35,27 +63,35 @@ def limapcosetup(ccdname) '{
   _limapar_addconfig(ccdname, "cocRunTime",LP_READ,1)
   _limapar_addtext(ccdname, "cocRunTime", "Frame run time (sec)")
 
+  _limapar_addconfig(ccdname, "coolingTemperature",LP_RW,1)
+  _limapar_addtext(ccdname, "coolingTemperature", "Cooling Set Point (only some cameras)")
+
+  _limapar_addconfig(ccdname, "firmwareInfo",LP_READ,1)
+  _limapar_addtext(ccdname, "firmwareInfo", "Pco Firware Info")
+
   _limapar_addconfig(ccdname, "frameRate",LP_READ,1)
   _limapar_addtext(ccdname, "frameRate", "Frame Rate (Hz)")
-
-  _limapar_addconfig(ccdname, "lastImgRecorded",LP_READ,1)
-  _limapar_addtext(ccdname, "lastImgRecorded", "last image recorded (Dimax, 2K, 4K)")
-
-  _limapar_addconfig(ccdname, "lastImgAcquired",LP_READ,1)
-  _limapar_addtext(ccdname, "lastImgAcquired", "last image acquired")
-
-  _limapar_addconfig(ccdname, "maxNbImages",LP_READ,1)
-  _limapar_addtext(ccdname, "maxNbImages", "Maximum number of images")
 
   _limapar_addconfig(ccdname, "info",LP_READ,1)
   _limapar_addtext(ccdname, "info", "Pco settings")
 
-  _limapar_addconfig(ccdname, "version",LP_READ,1)
-  _limapar_addtext(ccdname, "version", "Pco plugin version")
+  _limapar_addconfig(ccdname, "lastError",LP_READ,1)
+  _limapar_addtext(ccdname, "lastError", "Pco last error")
 
-  _limapar_addconfig(ccdname, "traceAcq",LP_READ,1)
-  _limapar_addtext(ccdname, "traceAcq", "Pco cam trace/time acq")
+  _limapar_addconfig(ccdname, "lastImgAcquired",LP_READ,1)
+  _limapar_addtext(ccdname, "lastImgAcquired", "last image acquired")
 
+  _limapar_addconfig(ccdname, "lastImgRecorded",LP_READ,1)
+  _limapar_addtext(ccdname, "lastImgRecorded", "last image recorded (Dimax, 2K, 4K)")
+
+  _limapar_addconfig(ccdname, "logMsg",LP_READ,1)
+  _limapar_addtext(ccdname, "logMsg", "Print last log messages")
+
+  _limapar_addconfig(ccdname, "logPcoEnabled",LP_READ,1)
+  _limapar_addtext(ccdname, "logPcoEnabled", "Pco LOG Files Enabled")
+
+  _limapar_addconfig(ccdname, "maxNbImages",LP_READ,1)
+  _limapar_addtext(ccdname, "maxNbImages", "Maximum number of images")
 
   #_limapar_addconfig(ccdname, "pixelRate",LP_RW|LP_LIST,1)
   _limapar_addconfig(ccdname, "pixelRate",LP_RW,1)
@@ -71,14 +107,35 @@ def limapcosetup(ccdname) '{
   _limapar_addconfig(ccdname, "pixelRateInfo",LP_READ,1)
   _limapar_addtext(ccdname, "pixelRateInfo", "Pco pixel rate info (MHz)")
  
+  _limapar_addconfig(ccdname, "roiInfo",LP_READ,1)
+  _limapar_addtext(ccdname, "roiInfo", "ROI Info")
+
+  _limapar_addconfig(ccdname, "roiLastFixed",LP_READ,1)
+  _limapar_addtext(ccdname, "roiLastFixed", "Last Fixed ROI Info")
+
   _limapar_addconfig(ccdname, "rollingShutter",LP_RW|LP_LIST,1)
   _limapar_addtext(ccdname, "rollingShutter", "Pco Edge Rolling/Global shutter")
   
-  _limapar_addconfig(ccdname, "adc",LP_RW,1)
-  _limapar_addtext(ccdname, "adc", "Number of present working ADC")
+  _limapar_addconfig(ccdname, "rollingShutterInfo",LP_READ,1)
+  _limapar_addtext(ccdname, "rollingShutterInfo", "Pco Rolling Shutter Info")
 
-  _limapar_addconfig(ccdname, "adcMax",LP_READ,1)
-  _limapar_addtext(ccdname, "adcMax", "Max. number of available ADC")
+  _limapar_addconfig(ccdname, "temperatureInfo",LP_READ,1)
+  _limapar_addtext(ccdname, "temperatureInfo", "Pco Temperature Sensors Info")
+
+  _limapar_addconfig(ccdname, "traceAcq",LP_READ,1)
+  _limapar_addtext(ccdname, "traceAcq", "Pco cam trace/time acq")
+
+  _limapar_addconfig(ccdname, "version",LP_READ,1)
+  _limapar_addtext(ccdname, "version", "Pco plugin version")
+
+  _limapar_addconfig(ccdname, "versionAtt",LP_READ,1)
+  _limapar_addtext(ccdname, "versionAtt", "Pco.py attribute file version")
+
+  _limapar_addconfig(ccdname, "versionSdk",LP_READ,1)
+  _limapar_addtext(ccdname, "versionSdk", "Pco SDK Version")
+
+
+
 }'
 
 #=====================================================================

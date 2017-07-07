@@ -20,6 +20,7 @@ def _limaslsdetector_setup(ccdname) '{
   _limapar_addconfig(ccdname, "dac_name_list_mv", LP_READ, 64)
   _limapar_addconfig(ccdname, "adc_name_list", LP_READ, 64)
 
+  _limapar_addconfig(ccdname, "pixel_depth", LP_RW|LP_LIST|LP_CB, 1)
   _limapar_addconfig(ccdname, "raw_mode", LP_RW|LP_CB, 1)
   _limapar_addconfig(ccdname, "show_mv", LP_RW, 1)
 
@@ -27,6 +28,7 @@ def _limaslsdetector_setup(ccdname) '{
   _limapar_addconfig(ccdname, "readout_flags", LP_RW|LP_LIST, 1)
 
   _limapar_addconfig(ccdname, "threshold_energy", LP_RW, 1)
+  _limapar_addconfig(ccdname, "all_trim_bits", LP_RW, 64)
 
   # --- callback macro on parameter set
   _limapar_addconfig_cb(ccdname, "_limaslsdetector_setpar")
@@ -38,13 +40,15 @@ def _limaslsdetector_setup(ccdname) '{
   _limapar_addtext(ccdname, "dac_name_list_mv", "mV DAC names")
   _limapar_addtext(ccdname, "adc_name_list", "ADC names")
 
+  _limapar_addtext(ccdname, "pixel_depth", "Image Pixel Depth")
   _limapar_addtext(ccdname, "raw_mode", "Raw Image Mode")
-  _limapar_addtext(ccdname, "show_mv", "Show DAC values in mili-volts")
+  _limapar_addtext(ccdname, "show_mv", "Show DAC values in milli-volts")
 
   _limapar_addtext(ccdname, "clock_div", "Speed Clock Divider")
   _limapar_addtext(ccdname, "readout_flags", "Readout Flags")
 
   _limapar_addtext(ccdname, "threshold_energy", "Threshold Energy (eV)")
+  _limapar_addtext(ccdname, "all_trim_bits", "Trimming bits for all pixels")
 
   # --- DACs
   aux_n = _limapar_get(ccdname, "dac_name_list", -1)
@@ -94,7 +98,7 @@ def _limaslsdetector_post_par_set '{
 }'
 
 def _limaslsdetector_setpar(ccdname, parname, value) '{
-  if (parname == "raw_mode") {
+  if ((parname == "pixel_depth") || (parname == "raw_mode")) {
     # inform SPEC about possible image type/size change
     local unit
     unit = LIMA_DEV[ccdname]["unit"]
@@ -107,10 +111,11 @@ def _limaslsdetector_setpar(ccdname, parname, value) '{
 }'
 
 def _limaslsdetector_menu(ccdname) '{
-  local items[] aitems[] parname i aux_s aux_n
+  local items[] aitems[] parname i aux_s aux_n val
   local nl option
 
   items["config_fname"] = ""
+  items["pixel_depth"] = ""
   items["raw_mode"] = ""
   items["clock_div"] = ""
   items["readout_flags"] = ""
@@ -146,12 +151,14 @@ def _limaslsdetector_menu(ccdname) '{
     nl++
 
     tty_move(0, nl++, "(2) Configuration:")
-    _limamenu_printitem(ccdname, "raw_mode", items["raw_mode"], \
+    _limamenu_printitem(ccdname, "pixel_depth", items["pixel_depth"], \
 			nl++, 21)
-    _limamenu_printitem(ccdname, "clock_div", items["clock_div"], \
+    _limamenu_printitem(ccdname, "raw_mode", items["raw_mode"], \
 			nl++, 22)
-    _limamenu_printitem(ccdname, "readout_flags", items["readout_flags"], \
+    _limamenu_printitem(ccdname, "clock_div", items["clock_div"], \
 			nl++, 23)
+    _limamenu_printitem(ccdname, "readout_flags", items["readout_flags"], \
+			nl++, 24)
     nl++
 
     tty_move(0, nl++, "(3) Calibration:")
@@ -161,7 +168,7 @@ def _limaslsdetector_menu(ccdname) '{
  			nl++, 32)
     nl++
 
-    tty_move(0, nl++, "(4) DACS Menu ............................... >>")
+    tty_move(0, nl++, "(4) DACS & TrimBits Menu .................... >>")
     tty_move(0, nl++, "(5) Monitoring Menu ......................... >>")
     nl++
 
@@ -169,17 +176,19 @@ def _limaslsdetector_menu(ccdname) '{
     printf("\n\n")
 
     if ((option == 2) || (option == 21))
-      _limapar_ask(ccdname, "raw_mode", (items["raw_mode"] == "Yes"))
-    if ((option == 2) || (option == 22))
-      _limapar_ask(ccdname, "clock_div", items["clock_div"])
+      _limapar_ask(ccdname, "pixel_depth", items["pixel_depth"])
+    if ((option == 2) || (option == 22)) {
+      val = (items["raw_mode"] == "Yes")
+      if (yesno("Raw Image Mode", val) != val)
+        _limapar_set(ccdname, "raw_mode", !val)
+    }
     if ((option == 2) || (option == 23))
+      _limapar_ask(ccdname, "clock_div", items["clock_div"])
+    if ((option == 2) || (option == 24))
       _limapar_ask(ccdname, "readout_flags", items["readout_flags"])
 
-    if ((option == 3) || (option == 31)) {
-      _limaslsdetector_ask_dac(ccdname, "dac_HVNew", -1)
-      getval("Type Enter to continue ...", "")
-    }
-
+    if ((option == 3) || (option == 31))
+      _limaslsdetector_ask_dac_trim_bits(ccdname, "dac_HVNew", -1)
     if ((option == 3) || (option == 32))
       _limapar_ask(ccdname, "threshold_energy", items["threshold_energy"])
 
@@ -199,7 +208,7 @@ def _limaslsdetector_module_name(ccdname, idx) '{
   return _limapar_get(ccdname, "hostname_list", idx)
 }'
 
-def _limaslsdetector_set_dac(ccdname, parname, idx, val) '{
+def _limaslsdetector_set_dac_trim_bits(ccdname, parname, idx, val) '{
   local devname arrname nbdet alen aidx txt dets
   devname = _limapar_getdevname(ccdname, parname)
   nbdet = _limaslsdetector_nb_modules(ccdname)
@@ -227,18 +236,49 @@ def _limaslsdetector_set_dac(ccdname, parname, idx, val) '{
   printf("Done!\n")
 }'
 
-def _limaslsdetector_ask_dac(ccdname, parname, idx) '{
-  local arrname txt val
+def _limaslsdetector_ask_dac_trim_bits(ccdname, parname, idx) '{
+  local ret[]
+
+  ret = _limaslsdetector_ask_mod_idx_val(ccdname, parname, idx)
+  if (ret["idx"] != -2)
+    _limaslsdetector_set_dac_trim_bits(ccdname, parname, ret["idx"], ret["val"])
+
+  input("Type Enter to continue ...")
+}'
+
+def _limaslsdetector_ask_mod_idx_val(ccdname, parname, idx) '{
+  local arrname txt val val2 new_val all_eq aux_n i ret[]
+
   arrname = LIMA_DEV[ccdname]["arrname"]
   txt = @arrname[parname]["desc"]
-  val = getval(txt, 0)
   if (idx == -2)
-    idx = getval("Module index to apply DAC on [-1=All]", -1)
-  _limaslsdetector_set_dac(ccdname, parname, idx, val)
+    idx = getval(sprintf("Module index to apply \"%s\" on [-1=All]", txt), -1)
+  val = _limapar_get(ccdname, parname, idx)
+  if (idx < 0) {
+    aux_n = val
+    val = val2 = 0
+    for (i = 0; i < aux_n; i++) {
+      val += LIMA_VALS[i]
+      val2 += pow(LIMA_VALS[i], 2)
+    }
+    all_eq = (val2 == pow(val, 2) / aux_n)
+    val = int(val / aux_n)
+  }
+  new_val = getval(txt, val)
+  if ((new_val < 0) || \
+      ((new_val == val) && \
+       ((idx >= 0) || all_eq || !yesno("Apply value to all modules", 0)))) {
+    printf("Skipping %s write\n", txt)
+    idx = -2
+  }
+
+  ret["idx"] = idx
+  ret["val"] = new_val
+  return ret
 }'
 
 def _limaslsdetector_dac_menu(ccdname) '{
-  local items[] parname i j dac_n dac_name[] aux_n aux_s aux_v
+  local items[] parname i j dac_n dac_name[] aux_n aux_s aux_v is_dac
   local nl option foption loption
 
   global LIMA_SLSDETECTOR[]
@@ -254,6 +294,7 @@ def _limaslsdetector_dac_menu(ccdname) '{
 
   items["hostname_list"] = ""
   items["show_mv"] = ""
+  items["all_trim_bits"] = ""
 
   option = 1
 
@@ -264,11 +305,11 @@ def _limaslsdetector_dac_menu(ccdname) '{
         continue 
       }
       aux_n = _limapar_get(ccdname, parname, -1)
-      is_adc = (substr(parname, 1, 3) == "adc")
       aux_s = ""
       for (i = 0; i < aux_n; i++)
         aux_s = sprintf("%s%s%7s", aux_s, i ? " " : "", LIMA_VALS[i])
-      items[parname] = sprintf("[ %s ]", aux_s)
+      is_dac = (substr(parname, 1, 3) == "dac")
+      items[parname] = sprintf("%s[ %s ]", is_dac ? "" : " ", aux_s)
     }
 
     aux_v = (items["show_mv"] == "Yes")
@@ -292,7 +333,11 @@ def _limaslsdetector_dac_menu(ccdname) '{
       parname = dac_name[i]
       _limamenu_printitem(ccdname, parname, items[parname], nl++, loption++)
     }
+    nl++
 
+    tty_move(0, nl++, "(3) Trim bits:")
+    _limamenu_printitem(ccdname, "all_trim_bits", items["all_trim_bits"],\
+			nl++, 31)
     option = getval("\n\n\tOption ---> ", 0)
     printf("\n\n")
 
@@ -301,12 +346,14 @@ def _limaslsdetector_dac_menu(ccdname) '{
       LIMA_SLSDETECTOR["show_mv"] = yesno("Show mV DACs", aux_v)
     }
 
-    if ((option >= foption) && (option < loption)) {
+    if ((option == 2) || ((option >= foption) && (option < loption))) {
       i = option - foption
       parname = dac_name[i]
-      _limaslsdetector_ask_dac(ccdname, parname, -2)
-      getval("Type Enter to continue ...", "")
+      _limaslsdetector_ask_dac_trim_bits(ccdname, parname, -2)
     }
+
+    if ((option == 3) || (option == 31))
+      _limaslsdetector_ask_dac_trim_bits(ccdname, "all_trim_bits", -2)
   }
 }'
 
@@ -332,7 +379,7 @@ def _limaslsdetector_monitor_menu(ccdname) '{
       aux_s = ""
       for (i = 0; i < aux_n; i++)
         aux_s = sprintf(aux_f, aux_s, i ? " " : "", LIMA_VALS[i])
-      items[parname] = sprintf("[ %s ]", aux_s)
+      items[parname] = sprintf("%s[ %s ]", is_adc ? "" : " ", aux_s)
     }
 
     nl = _limamenu_printtitle(ccdname, "Monitoring", "config")
@@ -352,6 +399,59 @@ def _limaslsdetector_monitor_menu(ccdname) '{
     option = getval("\n\n\tOption ---> ", 0)
     printf("\n\n")
   }
+}'
+
+def slsdetmot_config(mnum, type, unit, module, channel) '{
+  local ccdname
+
+  ccdname = slsdetmot_ADDR
+  if (type == "ctrl") {
+    printf("Using Lima SlsDetector motor on %s\n", ccdname)
+  }
+
+}'
+
+def slsdetmot_cmd(mnum, cmd, p1, p2) '{
+  local parname ccdname devname is_dac is_trim is_arr val aux_n
+
+  if (mnum == "..")
+    return 0
+
+  ccdname = motor_par(mnum, "address")
+  parname = motor_par(mnum, "name")
+  idx = motor_par(mnum, "idx")
+
+  devname = _limapar_getdevname(ccdname, parname)
+
+  is_dac = (substr(parname, 1, 3) == "dac")
+  is_trim = (parname == "all_trim_bits")
+  is_arr = (is_dac || is_trim) && (idx == -1)
+
+  if (cmd == "status")
+    return 0
+
+  if (cmd == "position") {
+    aux_n = _limapar_get(ccdname, parname, idx)
+    if (!is_arr)
+      return aux_n
+
+    val = 0
+    for (i = 0; i < aux_n; i++)
+      val += LIMA_VALS[i]
+    return val / aux_n
+  }
+
+  if (cmd == "start_one") {
+    if (is_arr) {
+      ulong array arr[1]
+      arr[0] = p1
+      tango_put(devname, parname, arr)
+      sleep(1)
+    } else {
+      _limapar_set(ccdname, parname, p1)
+    }
+  }
+
 }'
 
 

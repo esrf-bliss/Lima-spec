@@ -615,10 +615,15 @@ def _limapar_controlinit(ccdname, version) '{
 
   # --- video
   _limapar_addcontrol(ccdname, "video_live", LP_RW|LP_LIST, 1)
-
   _limapar_addtext(ccdname, "video_live", "Video Live")
-
   _limapar_addcontrol_cb(ccdname, "_limacontrol_setpar")
+
+  # --- local buffer device
+  _limapar_addcontrol(ccdname, "local_buffer_device", LP_READ, 1)
+  _limapar_addcontrol(ccdname, "local_buffer_active", LP_RW, 1)
+
+  _limapar_addtext(ccdname, "local_buffer_device", "Local Buffer Device Name")
+  _limapar_addtext(ccdname, "local_buffer_active", "Local Buffer Mode Active")
 
 }'
 

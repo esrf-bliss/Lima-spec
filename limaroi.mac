@@ -741,7 +741,13 @@ def _limaroi_server_read(ccdname, frompt) '{
   local nroi srv
   local lastpt readarr readnb lastrd
   local idx roi_id frame_id roiarr
+  local mult_trig_base
 
+  mult_trig_base = 0
+  if (LIMA_DEV[ccdname]["mult_trig"])
+    mult_trig_base = image_par(ccdunit, "get_current") - 1
+  frompt += mult_trig_base
+  
   nroi= LIMA_ROI_SRV[ccdname]["nroi"]
   if (!nroi)
     return (0)
@@ -776,7 +782,7 @@ def _limaroi_server_read(ccdname, frompt) '{
 
     for (idx= 0; idx<readnb; idx+=7) {
 	    roi_id= @readarr[idx]
-	    frame_id= @readarr[idx+1]
+	    frame_id= @readarr[idx+1] - mult_trig_base
       if (frame_id > lastrd)
 	      lastrd = frame_id
       if (LIMA_ROI_SRV[ccdname][roi_id]) {

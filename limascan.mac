@@ -1,0 +1,91 @@
+
+def limamulttrigscanon '{
+    local lima_name trig_mode
+
+    lima_name = ($# > 0) ? "$1" : getval("Lima camera name", "")
+    lima_name = _lima_checkccdname(lima_name)
+    
+    LIMA_DEV[lima_name]["mult_trig"] = 1
+    trig_mode = _limapar_get(lima_name, "acq_trigger_mode")
+    if (trig_mode == "INTERNAL_TRIGGER")
+        trig_mode = "INTERNAL_TRIGGER_MULTI"
+    else if (trig_mode == "EXTERNAL_TRIGGER")
+        trig_mode = "EXTERNAL_TRIGGER_MULTI"
+    _limapar_set(lima_name, "acq_trigger_mode", trig_mode)
+    
+    cdef("user_prescan_head", "lima_mult_trig_head(); ", "lima_mult_trig")
+    cdef("user_scan_tail", "lima_mult_trig_tail(0); ", "lima_mult_trig")
+}'
+
+
+def limamulttrigscanoff '{
+    local lima_name trig_mode i all_off
+
+    lima_name = ($# > 0) ? "$1" : getval("Lima camera name", "")
+    lima_name = _lima_checkccdname(lima_name)
+    
+    LIMA_DEV[lima_name]["mult_trig"] = 0
+ 
+    trig_mode = _limapar_get(lima_name, "acq_trigger_mode")
+    if (trig_mode == "INTERNAL_TRIGGER_MULTI")
+        trig_mode = "INTERNAL_TRIGGER"
+    else if (trig_mode == "EXTERNAL_TRIGGER_MULTI")
+        trig_mode = "EXTERNAL_TRIGGER"
+    _limapar_set(lima_name, "acq_trigger_mode", trig_mode)
+
+    all_off = 1
+    for (i = 1; i <= list_n(LIMA_DEV); i++) {
+    	if (list_getpar(LIMA_DEV, i, "mult_trig") != 0)
+	    all_off = 0
+    }
+
+    if (all_off) {
+        cdef("user_prescan_head", "", "lima_mult_trig", "delete")
+        cdef("user_scan_tail", "", "lima_mult_trig", "delete")
+    }
+}'
+
+def lima_mult_trig_head() '{
+    local lima_name i nb_points
+    
+    nb_points = (_stype & scanType_MeshScan) ? (_n1 * _n2) : _n1
+    #nb_points = array_op("rows", SCAN_POINTS)
+    printf("Mult-Trig scan nb_points=%d\n", nb_points)
+    for (i = 1; i <= list_n(LIMA_DEV); i++) {
+    	if (list_getpar(LIMA_DEV, i, "mult_trig") != 0) {
+	    lima_name = list_item(LIMA_DEV, i)
+	    lima_mult_trig_on(lima_name, nb_points)
+	}
+    }
+
+    cdef("cleanup_once", "lima_mult_trig_tail(1); ", "lima_mult_trig")
+}'
+
+def lima_mult_trig_tail(from_cleanup) '{
+    local lima_name i
+    
+    for (i = 1; i <= list_n(LIMA_DEV); i++) {
+    	if (list_getpar(LIMA_DEV, i, "mult_trig") != 0) {
+	    lima_name = list_item(LIMA_DEV, i)
+	    lima_mult_trig_off(lima_name)
+	}
+    }
+
+    if (!from_cleanup)
+        cdef("cleanup_once", "", "lima_mult_trig", "delete")
+}'
+
+def lima_mult_trig_on(lima_name, nb_points) '{
+    local ccd_u taco_dev
+    ccd_u = LIMA_DEV[lima_name]["unit"]
+    taco_dev = image_par(ccd_u, "device_id")
+    taco_io(taco_dev, "DevCcdSetMultTrigNbFrames", nb_points)
+}'
+
+def lima_mult_trig_off(lima_name) '{
+    local ccd_u taco_dev
+    ccd_u = LIMA_DEV[lima_name]["unit"]
+    taco_dev = image_par(ccd_u, "device_id")
+    taco_io(taco_dev, "DevCcdResetMultTrigNbFrames")
+}'
+

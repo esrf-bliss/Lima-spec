@@ -36,6 +36,9 @@ def limapcosetup(ccdname) '{
   _limapar_addconfig(ccdname, "bytesPerPixel",LP_READ,1)
   _limapar_addtext(ccdname, "bytesPerPixel", "Image Bytes Per Pixel")
 
+  _limapar_addconfig(ccdname, "bitAlignment",LP_RW,1)
+  _limapar_addtext(ccdname, "bitAlignment", "bit aligment")
+
   _limapar_addconfig(ccdname, "camerasFound",LP_READ,1)
   _limapar_addtext(ccdname, "camerasFound", "Pco Cameras found during Open search")
 
@@ -66,8 +69,17 @@ def limapcosetup(ccdname) '{
   _limapar_addconfig(ccdname, "coolingTemperature",LP_RW,1)
   _limapar_addtext(ccdname, "coolingTemperature", "Cooling Set Point (only some cameras)")
 
+  _limapar_addconfig(ccdname, "debugInt",LP_RW,1)
+  _limapar_addtext(ccdname, "debugInt", "PCO debug level (hex format: 0x....)")
+
+  _limapar_addconfig(ccdname, "debugIntTypes",LP_READ,1)
+  _limapar_addtext(ccdname, "debugIntTypes", "Pco Firware Info")
+
+  _limapar_addconfig(ccdname, "doubleImageMode",LP_RW,1)
+  _limapar_addtext(ccdname, "doubleImageMode", "double image mode")
+
   _limapar_addconfig(ccdname, "firmwareInfo",LP_READ,1)
-  _limapar_addtext(ccdname, "firmwareInfo", "Pco Firware Info")
+  _limapar_addtext(ccdname, "firmwareInfo", "PPCO debug types")
 
   _limapar_addconfig(ccdname, "frameRate",LP_READ,1)
   _limapar_addtext(ccdname, "frameRate", "Frame Rate (Hz)")
@@ -121,6 +133,9 @@ def limapcosetup(ccdname) '{
 
   _limapar_addconfig(ccdname, "temperatureInfo",LP_READ,1)
   _limapar_addtext(ccdname, "temperatureInfo", "Pco Temperature Sensors Info")
+
+  _limapar_addconfig(ccdname, "timestampMode",LP_RW,1)
+  _limapar_addtext(ccdname, "timestampMode", "timestamp mode")
 
   _limapar_addconfig(ccdname, "traceAcq",LP_READ,1)
   _limapar_addtext(ccdname, "traceAcq", "Pco cam trace/time acq")

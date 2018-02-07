@@ -1132,6 +1132,8 @@ def _limamenu_printitem(ccdname, parname, value, nl, option) '{
   while (length(txt)<35) { txt= txt "." }
   if (option ==-1){
     tty_move(5,nl, sprintf("     %s = \[md\]%s\[me\]", txt, value))
+  } else if (option ==-2){
+    tty_move(5,nl, sprintf("     %s", value))
   } else {
     tty_move(5,nl, sprintf("(%d) %s = \[md\]%s\[me\]", option, txt, value))
   }

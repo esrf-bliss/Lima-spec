@@ -79,7 +79,7 @@ def limapcosetup(ccdname) '{
   _limapar_addtext(ccdname, "doubleImageMode", "double image mode")
 
   _limapar_addconfig(ccdname, "firmwareInfo",LP_READ,1)
-  _limapar_addtext(ccdname, "firmwareInfo", "PPCO debug types")
+  _limapar_addtext(ccdname, "firmwareInfo", "Pco Firware Info")
 
   _limapar_addconfig(ccdname, "frameRate",LP_READ,1)
   _limapar_addtext(ccdname, "frameRate", "Frame Rate (Hz)")
@@ -125,8 +125,8 @@ def limapcosetup(ccdname) '{
   _limapar_addconfig(ccdname, "roiLastFixed",LP_READ,1)
   _limapar_addtext(ccdname, "roiLastFixed", "Last Fixed ROI Info")
 
-  _limapar_addconfig(ccdname, "rollingShutter",LP_RW|LP_LIST,1)
-  _limapar_addtext(ccdname, "rollingShutter", "Pco Edge Rolling/Global shutter")
+  _limapar_addconfig(ccdname, "rollingShutter",LP_RW,1)
+  _limapar_addtext(ccdname, "rollingShutter", "Pco Edge Rolling(1)/Global(2)/GlobalReset(4) shutter")
   
   _limapar_addconfig(ccdname, "rollingShutterInfo",LP_READ,1)
   _limapar_addtext(ccdname, "rollingShutterInfo", "Pco Rolling Shutter Info")
@@ -198,6 +198,7 @@ def limapcomenu(ccdname) '{
     if (_limapar_get(ccdname, "pixelRateValidValues")!="invalid"){
       _limamenu_printitem(ccdname, "pixelRateValidValues", items["pixelRateValidValues"], nl++,11)
       _limamenu_printitem(ccdname, "pixelRate", items["pixelRate"], nl++,-1)
+      _limamenu_printitem(ccdname, "", "pixel rate will be set in the NEXT arm!", nl++,-2)
     }
     else{
     _limamenu_printitem(ccdname, "Pixel rate usable  values", items["pixelRateAvailable"], nl++,11)

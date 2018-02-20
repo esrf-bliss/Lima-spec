@@ -23,12 +23,17 @@ def _limaslsdetector_setup(ccdname) '{
   _limapar_addconfig(ccdname, "pixel_depth", LP_RW|LP_LIST|LP_CB, 1)
   _limapar_addconfig(ccdname, "raw_mode", LP_RW|LP_CB, 1)
   _limapar_addconfig(ccdname, "show_mv", LP_RW, 1)
+  _limapar_addconfig(ccdname, "tolerate_lost_packets", LP_RW, 1)
 
   _limapar_addconfig(ccdname, "clock_div", LP_RW|LP_LIST, 1)
   _limapar_addconfig(ccdname, "readout_flags", LP_RW|LP_LIST, 1)
+  _limapar_addconfig(ccdname, "max_frame_rate", LP_READ, 1)
 
   _limapar_addconfig(ccdname, "threshold_energy", LP_RW, 1)
   _limapar_addconfig(ccdname, "all_trim_bits", LP_RW, 64)
+
+  _limapar_addconfig(ccdname, "nb_bad_frames", LP_READ, 1)
+  _limapar_addconfig(ccdname, "bad_frame_list", LP_READ|LP_LIST, 100000)
 
   # --- callback macro on parameter set
   _limapar_addconfig_cb(ccdname, "_limaslsdetector_setpar")
@@ -43,12 +48,17 @@ def _limaslsdetector_setup(ccdname) '{
   _limapar_addtext(ccdname, "pixel_depth", "Image Pixel Depth")
   _limapar_addtext(ccdname, "raw_mode", "Raw Image Mode")
   _limapar_addtext(ccdname, "show_mv", "Show DAC values in milli-volts")
+  _limapar_addtext(ccdname, "tolerate_lost_packets", "Tolerate Lost Packets")
 
   _limapar_addtext(ccdname, "clock_div", "Speed Clock Divider")
   _limapar_addtext(ccdname, "readout_flags", "Readout Flags")
+  _limapar_addtext(ccdname, "max_frame_rate", "Maximum Frame Rate (kHz)")
 
   _limapar_addtext(ccdname, "threshold_energy", "Threshold Energy (eV)")
   _limapar_addtext(ccdname, "all_trim_bits", "Trimming bits for all pixels")
+
+  _limapar_addtext(ccdname, "nb_bad_frames", "Number of bad frames")
+  _limapar_addtext(ccdname, "bad_frame_list", "List of bad frames")
 
   # --- DACs
   aux_n = _limapar_get(ccdname, "dac_name_list", -1)
@@ -117,8 +127,10 @@ def _limaslsdetector_menu(ccdname) '{
   items["config_fname"] = ""
   items["pixel_depth"] = ""
   items["raw_mode"] = ""
+  items["tolerate_lost_packets"] = ""
   items["clock_div"] = ""
   items["readout_flags"] = ""
+  items["max_frame_rate"] = ""
   items["threshold_energy"] = -2
 
   aitems["hostname_list"] = ""
@@ -129,7 +141,7 @@ def _limaslsdetector_menu(ccdname) '{
   while (option) {
     for (parname in items) {
       items[parname] = _limapar_get(ccdname, parname)
-      if (parname == "raw_mode")
+      if ((parname == "raw_mode") || (parname == "tolerate_lost_packets"))
         items[parname] = items[parname] ? "Yes" : "No"
     }
 
@@ -159,6 +171,11 @@ def _limaslsdetector_menu(ccdname) '{
 			nl++, 23)
     _limamenu_printitem(ccdname, "readout_flags", items["readout_flags"], \
 			nl++, 24)
+    _limamenu_printitem(ccdname, "max_frame_rate", items["max_frame_rate"], \
+			nl++, 25)
+    _limamenu_printitem(ccdname, "tolerate_lost_packets", \
+                        items["tolerate_lost_packets"], \
+			nl++, 26)
     nl++
 
     tty_move(0, nl++, "(3) Calibration:")
@@ -186,6 +203,11 @@ def _limaslsdetector_menu(ccdname) '{
       _limapar_ask(ccdname, "clock_div", items["clock_div"])
     if ((option == 2) || (option == 24))
       _limapar_ask(ccdname, "readout_flags", items["readout_flags"])
+    if ((option == 2) || (option == 26)) {
+      val = (items["tolerate_lost_packets"] == "Yes")
+      if (yesno("Tolerate Lost Packets", val) != val)
+        _limapar_set(ccdname, "tolerate_lost_packets", !val)
+    }
 
     if ((option == 3) || (option == 31))
       _limaslsdetector_ask_dac_trim_bits(ccdname, "dac_HVNew", -1)

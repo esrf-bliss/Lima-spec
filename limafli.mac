@@ -1,0 +1,74 @@
+#%NAME% 
+#  Specific macros for Lima Finger Lakes Intrumentation (FLI) detector 
+#%CATEGORY% Detection, Ccd
+
+#%LOG%
+#
+#
+
+def limaflisetup(ccdname) '{
+
+  # --- common control init
+  _limapar_controlinit(ccdname, 0)
+
+  # --- parameter definition
+
+  _limapar_addconfig(ccdname, "cooler_power",LP_READ,1)
+  _limapar_addconfig(ccdname, "temperature_sp", LP_RW|LP_MOT, 1)
+  _limapar_addconfig(ccdname, "temperature_ccd", LP_READ, 1)
+  _limapar_addconfig(ccdname, "temperature_base", LP_READ, 1)
+  _limapar_addconfig(ccdname, "ext_trigger_level",LP_RW|LP_LIST,1)
+
+  # --- parameter description
+  _limapar_addtext(ccdname, "cooler_power", "Cooler power (%)")
+  _limapar_addtext(ccdname, "temperature_sp", "Temperature set-point (C)")  
+  _limapar_addtext(ccdname, "temperature_ccd", "Sensor Temperature")  
+  _limapar_addtext(ccdname, "temperature_base", "External Temperature")  
+  _limapar_addtext(ccdname, "ext_trigger_level", "External trigger input level")
+}'
+
+lima_addlimatype("Fli", "limaflisetup", "limaflimenu")
+
+
+def limaflimenu(ccdname) '{
+  local items[] parname
+  local nl option
+  
+  items["cooler_power"] = -1
+  items["temperature_sp"] = -1
+  items["temperature_ccd"] = -1
+  items["temperature_base"] = -1
+  items["ext_trigger_level"] = ""
+  
+  option= 1
+  
+  while (option) {
+    
+    for (parname in items) {
+      items[parname]= _limapar_get(ccdname, parname)
+    }
+    nl = _limamenu_printtitle(ccdname, "Configuration", "config")
+    
+    tty_move(0, nl++, "(1) Temperature Control :")
+    tty_move(4, nl++, sprintf(" Sensor @  \[md\]%.2f\[me\] C (base @ %.2f C) cooler power @ %.2f \%", items["temperature_ccd"], items["temperature_base"], items["cooler_power"]))
+    _limamenu_printitem(ccdname, "temperature_sp", items["temperature_sp"], nl++,11)
+    nl++
+    tty_move(0, nl++, "(2) Input/Output Signals :")
+    _limamenu_printitem(ccdname, "ext_trigger_level", items["ext_trigger_level"], nl++,21)
+
+    option= getval("\n\n\tOption ---> ", 0)
+    printf("\n\n")
+
+
+    if(option=="r")
+      continue
+    if((option==1) || (option==11))
+      _limapar_ask(ccdname, "temperature_sp",items["temperature_sp"])
+    if((option==2) || (option==21))
+      _limapar_ask(ccdname, "ext_trigger_level",items["ext_trigger_level"])
+  }
+}'
+#%MACROS%
+#%IMACROS%
+#%TOC%
+#%AUTHOR% L.Claustre 20.02.2018

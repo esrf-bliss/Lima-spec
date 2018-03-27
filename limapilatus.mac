@@ -1,4 +1,3 @@
-
 def limapilatussetup(ccdname) '{
 
   # --- common control init
@@ -67,3 +66,24 @@ def limapilatusmenu(ccdname) '{
   }
 }'
 
+def limapilatusResetHighVoltage '{
+  local ccd_name sleep_time timeout dev_name
+  if ($# < 1 || $# > 2) {
+    print "Usage: $0 <ccdname> [<sleep_time(s)>]"
+    print
+    print "(default sleep_time is 1 second)"
+    exit
+  }
+  ccdname = "$1"
+  sleep_time = $# == 1 ? 1 : "$2"
+  dev_name = LIMA_DEV[ccdname]["config"]
+
+  # This command takes a few seconds (~30) + sleep time
+  timeout = tango_io(dev_name, "timeout")
+  tango_io(dev_name, "timeout", 30 + sleep_time)
+
+  tango_io(LIMA_DEV[ccdname]["config"], "resetHighVoltage", sleep_time)
+
+  # restore old timeout
+  tango_io(dev_name, "timeout", timeout)
+}'

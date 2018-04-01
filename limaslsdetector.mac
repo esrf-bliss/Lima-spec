@@ -26,7 +26,7 @@ def _limaslsdetector_setup(ccdname) '{
   _limapar_addconfig(ccdname, "tolerate_lost_packets", LP_RW, 1)
 
   _limapar_addconfig(ccdname, "clock_div", LP_RW|LP_LIST, 1)
-  _limapar_addconfig(ccdname, "readout_flags", LP_RW|LP_LIST, 1)
+  _limapar_addconfig(ccdname, "parallel_mode", LP_RW|LP_LIST, 1)
   _limapar_addconfig(ccdname, "max_frame_rate", LP_READ, 1)
 
   _limapar_addconfig(ccdname, "threshold_energy", LP_RW, 1)
@@ -51,7 +51,7 @@ def _limaslsdetector_setup(ccdname) '{
   _limapar_addtext(ccdname, "tolerate_lost_packets", "Tolerate Lost Packets")
 
   _limapar_addtext(ccdname, "clock_div", "Speed Clock Divider")
-  _limapar_addtext(ccdname, "readout_flags", "Readout Flags")
+  _limapar_addtext(ccdname, "parallel_mode", "Parallel Mode")
   _limapar_addtext(ccdname, "max_frame_rate", "Maximum Frame Rate (kHz)")
 
   _limapar_addtext(ccdname, "threshold_energy", "Threshold Energy (eV)")
@@ -129,7 +129,7 @@ def _limaslsdetector_menu(ccdname) '{
   items["raw_mode"] = ""
   items["tolerate_lost_packets"] = ""
   items["clock_div"] = ""
-  items["readout_flags"] = ""
+  items["parallel_mode"] = ""
   items["max_frame_rate"] = ""
   items["threshold_energy"] = -2
 
@@ -169,7 +169,7 @@ def _limaslsdetector_menu(ccdname) '{
 			nl++, 22)
     _limamenu_printitem(ccdname, "clock_div", items["clock_div"], \
 			nl++, 23)
-    _limamenu_printitem(ccdname, "readout_flags", items["readout_flags"], \
+    _limamenu_printitem(ccdname, "parallel_mode", items["parallel_mode"], \
 			nl++, 24)
     _limamenu_printitem(ccdname, "max_frame_rate", items["max_frame_rate"], \
 			nl++, 25)
@@ -202,7 +202,7 @@ def _limaslsdetector_menu(ccdname) '{
     if ((option == 2) || (option == 23))
       _limapar_ask(ccdname, "clock_div", items["clock_div"])
     if ((option == 2) || (option == 24))
-      _limapar_ask(ccdname, "readout_flags", items["readout_flags"])
+      _limapar_ask(ccdname, "parallel_mode", items["parallel_mode"])
     if ((option == 2) || (option == 26)) {
       val = (items["tolerate_lost_packets"] == "Yes")
       if (yesno("Tolerate Lost Packets", val) != val)

@@ -26,11 +26,12 @@ def _limaslsdetector_setup(ccdname) '{
   _limapar_addconfig(ccdname, "tolerate_lost_packets", LP_RW, 1)
 
   _limapar_addconfig(ccdname, "clock_div", LP_RW|LP_LIST, 1)
-  _limapar_addconfig(ccdname, "readout_flags", LP_RW|LP_LIST, 1)
+  _limapar_addconfig(ccdname, "parallel_mode", LP_RW|LP_LIST, 1)
   _limapar_addconfig(ccdname, "max_frame_rate", LP_READ, 1)
 
   _limapar_addconfig(ccdname, "threshold_energy", LP_RW, 1)
   _limapar_addconfig(ccdname, "all_trim_bits", LP_RW, 64)
+  _limapar_addconfig(ccdname, "high_voltage", LP_RW, 1)
 
   _limapar_addconfig(ccdname, "nb_bad_frames", LP_READ, 1)
   _limapar_addconfig(ccdname, "bad_frame_list", LP_READ|LP_LIST, 100000)
@@ -51,11 +52,12 @@ def _limaslsdetector_setup(ccdname) '{
   _limapar_addtext(ccdname, "tolerate_lost_packets", "Tolerate Lost Packets")
 
   _limapar_addtext(ccdname, "clock_div", "Speed Clock Divider")
-  _limapar_addtext(ccdname, "readout_flags", "Readout Flags")
+  _limapar_addtext(ccdname, "parallel_mode", "Parallel Mode")
   _limapar_addtext(ccdname, "max_frame_rate", "Maximum Frame Rate (kHz)")
 
   _limapar_addtext(ccdname, "threshold_energy", "Threshold Energy (eV)")
   _limapar_addtext(ccdname, "all_trim_bits", "Trimming bits for all pixels")
+  _limapar_addtext(ccdname, "high_voltage", "High Voltage (V)")
 
   _limapar_addtext(ccdname, "nb_bad_frames", "Number of bad frames")
   _limapar_addtext(ccdname, "bad_frame_list", "List of bad frames")
@@ -65,8 +67,6 @@ def _limaslsdetector_setup(ccdname) '{
   for (i = 0; i < aux_n; i++) {
     aux_s = LIMA_VALS[i]
     aux_d = sprintf("DAC %s", substr(aux_s, 5))
-    if (aux_s == "dac_HVNew")
-      aux_d = "High Voltage (V)"
     _limapar_addconfig(ccdname, aux_s, LP_RW, 64)
     _limapar_addtext(ccdname, aux_s, aux_d)
   }
@@ -129,12 +129,12 @@ def _limaslsdetector_menu(ccdname) '{
   items["raw_mode"] = ""
   items["tolerate_lost_packets"] = ""
   items["clock_div"] = ""
-  items["readout_flags"] = ""
+  items["parallel_mode"] = ""
   items["max_frame_rate"] = ""
   items["threshold_energy"] = -2
+  items["high_voltage"] = ""
 
   aitems["hostname_list"] = ""
-  aitems["dac_HVNew"] = ""
 
   option = 1
 
@@ -169,7 +169,7 @@ def _limaslsdetector_menu(ccdname) '{
 			nl++, 22)
     _limamenu_printitem(ccdname, "clock_div", items["clock_div"], \
 			nl++, 23)
-    _limamenu_printitem(ccdname, "readout_flags", items["readout_flags"], \
+    _limamenu_printitem(ccdname, "parallel_mode", items["parallel_mode"], \
 			nl++, 24)
     _limamenu_printitem(ccdname, "max_frame_rate", items["max_frame_rate"], \
 			nl++, 25)
@@ -179,7 +179,7 @@ def _limaslsdetector_menu(ccdname) '{
     nl++
 
     tty_move(0, nl++, "(3) Calibration:")
-    _limamenu_printitem(ccdname, "dac_HVNew", aitems["dac_HVNew"], \
+    _limamenu_printitem(ccdname, "high_voltage", items["high_voltage"], \
 			nl++, 31)
     _limamenu_printitem(ccdname, "threshold_energy", items["threshold_energy"],\
  			nl++, 32)
@@ -202,7 +202,7 @@ def _limaslsdetector_menu(ccdname) '{
     if ((option == 2) || (option == 23))
       _limapar_ask(ccdname, "clock_div", items["clock_div"])
     if ((option == 2) || (option == 24))
-      _limapar_ask(ccdname, "readout_flags", items["readout_flags"])
+      _limapar_ask(ccdname, "parallel_mode", items["parallel_mode"])
     if ((option == 2) || (option == 26)) {
       val = (items["tolerate_lost_packets"] == "Yes")
       if (yesno("Tolerate Lost Packets", val) != val)
@@ -210,7 +210,7 @@ def _limaslsdetector_menu(ccdname) '{
     }
 
     if ((option == 3) || (option == 31))
-      _limaslsdetector_ask_dac_trim_bits(ccdname, "dac_HVNew", -1)
+      _limapar_ask(ccdname, "high_voltage", items["high_voltage"])
     if ((option == 3) || (option == 32))
       _limapar_ask(ccdname, "threshold_energy", items["threshold_energy"])
 
@@ -362,11 +362,6 @@ def _limaslsdetector_dac_menu(ccdname) '{
 			nl++, 31)
     option = getval("\n\n\tOption ---> ", 0)
     printf("\n\n")
-
-    if ((option == 1) || (option == 12)) {
-      aux_v = (items["show_mv"] == "Yes")
-      LIMA_SLSDETECTOR["show_mv"] = yesno("Show mV DACs", aux_v)
-    }
 
     if ((option == 2) || ((option >= foption) && (option < loption))) {
       i = option - foption

@@ -33,6 +33,8 @@ def _limaslsdetector_setup(ccdname) '{
   _limapar_addconfig(ccdname, "all_trim_bits", LP_RW, 64)
   _limapar_addconfig(ccdname, "high_voltage", LP_RW, 1)
 
+  _limapar_addconfig(ccdname, "skip_frame_freq", LP_RW, 1)
+
   _limapar_addconfig(ccdname, "nb_bad_frames", LP_READ, 1)
   _limapar_addconfig(ccdname, "bad_frame_list", LP_READ|LP_LIST, 100000)
 
@@ -58,6 +60,8 @@ def _limaslsdetector_setup(ccdname) '{
   _limapar_addtext(ccdname, "threshold_energy", "Threshold Energy (eV)")
   _limapar_addtext(ccdname, "all_trim_bits", "Trimming bits for all pixels")
   _limapar_addtext(ccdname, "high_voltage", "High Voltage (V)")
+
+  _limapar_addtext(ccdname, "skip_frame_freq", "Skip-frames frequency")
 
   _limapar_addtext(ccdname, "nb_bad_frames", "Number of bad frames")
   _limapar_addtext(ccdname, "bad_frame_list", "List of bad frames")

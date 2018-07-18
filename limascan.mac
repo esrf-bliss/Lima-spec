@@ -1,26 +1,63 @@
 
-def limamulttrigscanon '{
-    local lima_name lima_trig_mode ccd_trig_mode ccd_u taco_dev
+def limamulttrigsetup '{
+    local lima_name lima_n trig_gen trig_dev msg
 
     lima_name = ($# > 0) ? "$1" : getval("Lima camera name", "")
     lima_name = _lima_checkccdname(lima_name)
-    ccd_u = LIMA_DEV[lima_name]["unit"]
-    taco_dev = image_par(ccd_u, "device_id")
+    lima_n = list_check(LIMA_DEV, lima_name)
 
-    taco_io(taco_dev, "DevCcdResetMultTrigNbFrames")
-    LIMA_DEV[lima_name]["prev_mult_trig"] = 0
-    LIMA_DEV[lima_name]["mult_trig"] = 1
-    lima_trig_mode = _limapar_get(lima_name, "acq_trigger_mode")
-    ccd_trig_mode = image_par(ccd_u, "ext_trig")
-    if (lima_trig_mode == "INTERNAL_TRIGGER") {
-        lima_trig_mode = "INTERNAL_TRIGGER_MULTI"
-    } else if (lima_trig_mode == "EXTERNAL_TRIGGER") {
-        lima_trig_mode = "EXTERNAL_TRIGGER_MULTI"
-	ccd_trig_mode = 2
+    trig_gen = list_getpar(LIMA_DEV, lima_n, "mult_trig_gen")
+    if (!trig_gen)
+        trig_gen = "SOFT"
+    trig_gen = ($# > 1) ? "$2" : getval("Trigger generator [SOFT|CT2|OPIOM]", \
+                                        trig_gen)
+    if ((trig_gen != "SOFT") && (trig_gen != "CT2") && (trig_gen != "OPIOM")) {
+        printf("Invalid trigger generator: %s. Can be SOFT|CT2|OPIOM\n", \
+               trig_gen)
+        exit
     }
-    _limapar_set(lima_name, "acq_trigger_mode", lima_trig_mode)
-    image_par(ccd_u, "ext_trig", ccd_trig_mode)
-    CCD_TRIG[ccd_u] = ccd_trig_mode
+    list_setpar(LIMA_DEV, lima_n, "mult_trig_gen", trig_gen)
+
+    if (trig_gen != "SOFT") {
+        trig_dev = list_getpar(LIMA_DEV, lima_n, "mult_trig_dev")
+        msg = (trig_gen == "CT2") ? "P201 CT2 counter name" : "OPIOM name"
+        trig_dev = ($# > 2) ? "$3" : getval(msg, trig_dev)
+        if (trig_dev == "") {
+            printf("Invalid %s: %s\n", msg, trig_dev)
+            exit
+        }
+        list_setpar(LIMA_DEV, lima_n, "mult_trig_dev", trig_dev)
+    }
+
+    if (trig_gen == "CT2")
+        lima_mult_trig_ct2_default(lima_name)
+    else if (trig_gen == "OPIOM")
+        lima_mult_trig_opiom_default(lima_name)
+
+    if (list_getpar(LIMA_DEV, lima_n, "mult_trig"))
+        limamulttrigscanon_func(lima_name)
+    else
+        limamulttrigscanoff_func(lima_name)
+}'
+
+def limamulttrigscanon '{
+    local lima_name
+
+    lima_name = ($# > 0) ? "$1" : getval("Lima camera name", "")
+    limamulttrigscanon_func(lima_name)
+}'
+
+def limamulttrigscanon_func(lima_name) '{
+    local lima_n ccd_u taco_dev
+
+    lima_name = _lima_checkccdname(lima_name)
+    lima_n = list_check(LIMA_DEV, lima_name)
+
+    ccd_u = list_getpar(LIMA_DEV, lima_n, "unit")
+    taco_dev = image_par(ccd_u, "device_id")
+    taco_io(taco_dev, "DevCcdResetMultTrigNbFrames")
+    list_setpar(LIMA_DEV, lima_n, "prev_mult_trig", 0)
+    list_setpar(LIMA_DEV, lima_n, "mult_trig", 1)
     
     cdef("user_prescan_head", "lima_mult_trig_head(); ", "lima_mult_trig")
     cdef("user_scan_tail", "lima_mult_trig_tail(0); ", "lima_mult_trig")
@@ -28,26 +65,19 @@ def limamulttrigscanon '{
 
 
 def limamulttrigscanoff '{
-    local lima_name lima_trig_mode ccd_trig_mode ccd_u i all_off
+    local lima_name
 
     lima_name = ($# > 0) ? "$1" : getval("Lima camera name", "")
-    lima_name = _lima_checkccdname(lima_name)
-    ccd_u = LIMA_DEV[lima_name]["unit"]
-    
-    LIMA_DEV[lima_name]["mult_trig"] = 0
- 
-    lima_trig_mode = _limapar_get(lima_name, "acq_trigger_mode")
-    ccd_trig_mode = image_par(ccd_u, "ext_trig")
-    if (lima_trig_mode == "INTERNAL_TRIGGER_MULTI") {
-        lima_trig_mode = "INTERNAL_TRIGGER"
-    } else if (lima_trig_mode == "EXTERNAL_TRIGGER_MULTI") {
-        lima_trig_mode = "EXTERNAL_TRIGGER"
-	ccd_trig_mode = 1
-    }
-    _limapar_set(lima_name, "acq_trigger_mode", lima_trig_mode)
-    image_par(ccd_u, "ext_trig", ccd_trig_mode)
-    CCD_TRIG[ccd_u] = ccd_trig_mode
+    limamulttrigscanoff_func(lima_name)
+}'
 
+def limamulttrigscanoff_func(lima_name) '{
+    local lima_name lima_n i all_off
+
+    lima_name = _lima_checkccdname(lima_name)
+    lima_n = list_check(LIMA_DEV, lima_name)
+    list_setpar(LIMA_DEV, lima_n, "mult_trig", 0)
+ 
     all_off = 1
     for (i = 1; i <= list_n(LIMA_DEV); i++) {
     	if (list_getpar(LIMA_DEV, i, "mult_trig") > 0)
@@ -61,15 +91,8 @@ def limamulttrigscanoff '{
 }'
 
 def lima_mult_trig_head() '{
-    local lima_name lima_acq_mode i nb_points msg_printed
-    
-    lima_acq_mode = _limapar_get(lima_name, "acq_mode")
-    if (lima_acq_mode == "ACCUMULATION") {
-        printf("Error: %s acq_mode is %s. Mult-trig scan not supported\n", \
-	       lima_name, lima_acq_mode)
-	exit
-    }
-    
+    local lima_name i nb_points msg_printed
+
     nb_points = (_stype & scanType_MeshScan) ? (_n1 * _n2) : _n1
     #nb_points = array_op("rows", SCAN_POINTS)
     msg_printed = 0
@@ -88,6 +111,9 @@ def lima_mult_trig_head() '{
 
 def lima_mult_trig_tail(from_cleanup) '{
     local lima_name i
+
+    if (!from_cleanup)
+        cdef("cleanup_once", "", "lima_mult_trig", "delete")
     
     for (i = 1; i <= list_n(LIMA_DEV); i++) {
     	if (list_getpar(LIMA_DEV, i, "mult_trig") > 0) {
@@ -95,28 +121,167 @@ def lima_mult_trig_tail(from_cleanup) '{
 	    lima_mult_trig_off(lima_name)
 	}
     }
-
-    if (!from_cleanup)
-        cdef("cleanup_once", "", "lima_mult_trig", "delete")
 }'
 
 def lima_mult_trig_on(lima_name, nb_points) '{
-    local ccd_u taco_dev
-    if (list_getpar(LIMA_DEV, lima_name, "prev_mult_trig") <= 0) {
-        ccd_u = LIMA_DEV[lima_name]["unit"]
-        taco_dev = image_par(ccd_u, "device_id")
-        taco_io(taco_dev, "DevCcdSetMultTrigNbFrames", nb_points)
-        list_setpar(LIMA_DEV, lima_name, "prev_mult_trig", 1)
+    local lima_n ccd_u taco_dev tango_dev trig_gen is_soft good_soft
+    local lima_acq_mode lima_trig_mode ccd_trig_mode
+    local det_exp det_dtime det_pulses skip_frame_freq
+    
+    lima_n = list_check(LIMA_DEV, lima_name)
+    if (list_getpar(LIMA_DEV, lima_n, "prev_mult_trig") > 0)
+        return
+
+    trig_gen = list_getpar(LIMA_DEV, lima_n, "mult_trig_gen")
+    is_soft = (trig_gen == "SOFT")
+    lima_trig_mode = _limapar_get(lima_name, "acq_trigger_mode")
+    good_soft = (lima_trig_mode == "INTERNAL_TRIGGER")
+    if (is_soft != good_soft) {
+        printf("Error: %s in %s and mult-trig generator is %s\n", \
+               lima_name, lima_trig_mode, trig_gen)
+        exit
     }
+
+    ccd_u = list_getpar(LIMA_DEV, lima_n, "unit")
+    ccd_trig_mode = image_par(ccd_u, "ext_trig")
+    if (lima_trig_mode == "INTERNAL_TRIGGER") {
+        lima_trig_mode = "INTERNAL_TRIGGER_MULTI"
+    } else if (lima_trig_mode == "EXTERNAL_TRIGGER") {
+        lima_trig_mode = "EXTERNAL_TRIGGER_MULTI"
+	ccd_trig_mode = 2
+    }
+    if (!_limapar_set(lima_name, "acq_trigger_mode", lima_trig_mode))
+        exit
+    image_par(ccd_u, "ext_trig", ccd_trig_mode)
+    CCD_TRIG[ccd_u] = ccd_trig_mode
+
+    taco_dev = image_par(ccd_u, "device_id")
+    taco_io(taco_dev, "DevCcdSetMultTrigNbFrames", nb_points)
+    list_setpar(LIMA_DEV, lima_n, "prev_mult_trig", 1)
+
+    det_exp = _ctime
+    det_dtime = _limapar_get(lima_name, "latency_time")
+    det_pulses = 1
+    lima_acq_mode = _limapar_get(lima_name, "acq_mode")
+    if (lima_acq_mode == "ACCUMULATION") {
+        if (is_soft) {
+            printf("Error: %s acq_mode/trig_mode is %s/%s. %s\n", \
+                   lima_name, lima_acq_mode, lima_trig_mode, \
+                   "Mult-trig scan not supported")
+            exit
+        }
+        det_exp = _limapar_get(lima_name, "acq_expo_time")
+        if (fabs(det_exp - _ctime) > 10e-6) {
+            _limapar_set(lima_name, "acq_expo_time", _ctime)
+            tango_dev = list_getpar(LIMA_DEV, lima_n, "control")
+            tango_io(tango_dev, "prepareAcq")
+        }
+        det_pulses = _limapar_get(lima_name, "acc_nb_frames")
+        det_exp = _limapar_get(lima_name, "acc_live_time") / det_pulses
+        det_dtime = _limapar_get(lima_name, "acc_dead_time") / (det_pulses - 1)
+    }
+
+    skip_frame_freq = 0
+    if (_limapar_get(lima_name, "camera_type") == "SlsDetector")
+        skip_frame_freq = det_pulses++
+    if (skip_frame_freq) {
+        if (is_soft) {
+            printf("Error: %s mult-trig scan needs CT2/OPIOM\n", lima_name)
+            exit
+        }
+        _limapar_set(lima_name, "skip_frame_freq", skip_frame_freq)
+    }
+    list_setpar(LIMA_DEV, lima_n, "skip_frame_freq", skip_frame_freq)
+
+    printf("%s: up=%s, down=%s, pulses=%s\n", trig_gen, \
+           det_exp, det_dtime, det_pulses)
+    if (trig_gen == "CT2")
+        lima_mult_trig_ct2_set(lima_name, det_exp, det_dtime, det_pulses)
+    else if (trig_gen == "OPIOM")
+        lima_mult_trig_opiom_set(lima_name, det_exp, det_dtime, det_pulses)
 }'
 
 def lima_mult_trig_off(lima_name) '{
-    local ccd_u taco_dev
-    if (list_getpar(LIMA_DEV, lima_name, "prev_mult_trig") > 0) {
-        ccd_u = LIMA_DEV[lima_name]["unit"]
-        taco_dev = image_par(ccd_u, "device_id")
-        taco_io(taco_dev, "DevCcdResetMultTrigNbFrames")
-        list_setpar(LIMA_DEV, lima_name, "prev_mult_trig", 0)
+    local lima_n trig_gen ccd_u taco_dev tango_dev
+
+    lima_n = list_check(LIMA_DEV, lima_name)
+    if (list_getpar(LIMA_DEV, lima_n, "prev_mult_trig") <= 0)
+        return
+
+    if (_limapar_get(lima_name, "acq_status") == "Running") {
+        tango_dev = list_getpar(LIMA_DEV, lima_n, "control")
+        tango_io(tango_dev, "stopAcq")
+    }
+    while (_limapar_get(lima_name, "acq_status") != "Ready")
+        sleep(COUNTERSPOLLTIME)
+
+    ccd_u = list_getpar(LIMA_DEV, lima_n, "unit")
+    taco_dev = image_par(ccd_u, "device_id")
+    taco_io(taco_dev, "DevCcdResetMultTrigNbFrames")
+    list_setpar(LIMA_DEV, lima_n, "prev_mult_trig", 0)
+
+    lima_trig_mode = _limapar_get(lima_name, "acq_trigger_mode")
+    ccd_trig_mode = image_par(ccd_u, "ext_trig")
+    if (lima_trig_mode == "INTERNAL_TRIGGER_MULTI") {
+        lima_trig_mode = "INTERNAL_TRIGGER"
+    } else if (lima_trig_mode == "EXTERNAL_TRIGGER_MULTI") {
+        lima_trig_mode = "EXTERNAL_TRIGGER"
+	ccd_trig_mode = 1
+    }
+    _limapar_set(lima_name, "acq_trigger_mode", lima_trig_mode)
+    image_par(ccd_u, "ext_trig", ccd_trig_mode)
+    CCD_TRIG[ccd_u] = ccd_trig_mode
+
+    trig_gen = list_getpar(LIMA_DEV, lima_n, "mult_trig_gen")
+    if (trig_gen == "CT2")
+        lima_mult_trig_ct2_default(lima_name)
+    else if (trig_gen == "OPIOM")
+        lima_mult_trig_opiom_default(lima_name)
+
+    if (list_getpar(LIMA_DEV, lima_n, "skip_frame_freq")) {
+        _limapar_set(lima_name, "skip_frame_freq", 0)
+        list_setpar(LIMA_DEV, lima_n, "skip_frame_freq", 0)
     }
 }'
 
+def lima_mult_trig_ct2_default(lima_name) '{
+    lima_mult_trig_ct2_set(lima_name, 1, 0, 1)
+}'
+
+def lima_mult_trig_ct2_set(lima_name, det_exp, det_dtime, det_pulses) '{
+    local lima_n ct2_mne ct2_cnum ct2_acq_mode ct2_period
+
+    lima_n = list_check(LIMA_DEV, lima_name)
+    ct2_mne = list_getpar(LIMA_DEV, lima_n, "mult_trig_dev")
+    ct2_cnum = cnt_num(ct2_mne)
+    ct2_acq_mode = (det_pulses > 1) ? 2 : 0 # IntTrigSingle/IntTrigReadout
+    ct2_period = (det_pulses > 1) ? (det_exp + det_dtime) : 0
+    counter_par(ct2_cnum, "acq_mode", ct2_acq_mode)
+    counter_par(ct2_cnum, "acq_nb_points", det_pulses)
+    counter_par(ct2_cnum, "acq_expo_time", det_exp)
+    counter_par(ct2_cnum, "acq_point_period", ct2_period)
+}'
+
+def lima_mult_trig_opiom_default(lima_name) '{
+    lima_mult_trig_opiom_set(lima_name, 500e-6, 500e-6, 1)
+}'
+
+def lima_mult_trig_opiom_set(lima_name, det_exp, det_dtime, det_pulses) '{
+    local lima_n opiom_name opiom_cmd opiom_cnt opiom_clock opiom_trig_input
+    local opiom_up opiom_down opiom_res
+
+    lima_n = list_check(LIMA_DEV, lima_name)
+    opiom_name = list_getpar(LIMA_DEV, lima_n, "mult_trig_dev")
+    opiom_cnt = 1
+    opiom_trig_input = "I8"
+    opiom_clock = 16
+    opiom_up = int(max2(det_exp, 500e-6) * opiom_clock * 1e6)
+    opiom_down = int(max2(det_dtime, 500e-6) * opiom_clock * 1e6)
+    opiom_cmd = sprintf("CNT %d CLK%d START RISE %s PULSE %d %d %d", \
+                        opiom_cnt, opiom_clock, opiom_trig_input, \
+                        opiom_up, opiom_down, det_pulses)
+    opiom_res = isgdevice_comm_ack(opiom_name, opiom_cmd)
+    if (opiom_res != "OK")
+        printf("ERROR: lima_mult_trig_opiom_set: opiom response: \"%s\"\n", \
+               opiom_res)
+}'

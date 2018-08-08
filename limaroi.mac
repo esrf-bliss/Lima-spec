@@ -741,9 +741,10 @@ def _limaroi_server_read(ccdname, frompt) '{
   local nroi srv
   local lastpt readarr readnb lastrd
   local idx roi_id frame_id roiarr
-  local mult_trig_base
+  local mult_trig_base ccdunit
 
   mult_trig_base = 0
+  ccdunit = LIMA_DEV[ccdname]["unit"]
   if (LIMA_DEV[ccdname]["mult_trig"])
     mult_trig_base = image_par(ccdunit, "get_current") - 1
   frompt += mult_trig_base

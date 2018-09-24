@@ -1,0 +1,337 @@
+#%TITLE% limabpm.mac
+#%NAME% LIMA BPM pseudo counters
+#%DESCRIPTION%
+# Implements BPM pseudo counters for LIMA with BPM plugin from version 1.8
+#
+#%SETUP%
+# For each camera used:
+# %BR% 1) limabpmsetup <camera_lima_name> (as configured in limaccdsetup)
+# %BR% 2) limabpmadd (...) for each desired BPM counter
+# %BR% 3) limabpmon <camera_lima_name> to activate BPM plugin on server side
+# %BR%Counters will have a default value of -1.0 if the BPM plugin is not
+# activated. To check plugin state and configured counteers, use %B%limabpmstatus%B%.
+#
+#%END%
+
+#%CATEGORY% Detection, Ccd
+
+
+#%UU% <ccdname>
+#%MDESC%
+# init macro hook and associative array. need to be called once before adding bpm counters.
+#
+def limabpmsetup '{
+    local ccdname devname bpmdev
+    global LIMA_BPM[]
+
+    if (!$#) {
+        print "Usage: $0 <ccdname>"
+        exit
+    }
+    ccdname = _lima_checkccdname("$1")
+    devname = LIMA_DEV[ccdname]["control"]
+    bpmdev = tango_io(devname, "getPluginDeviceNameFromType", "bpm")
+    LIMA_DEV[ccdname]["bpmdev"] = bpmdev
+    if (bpmdev == "") {
+        LIMA_DEV[ccdname]["bpmdev"] = 0
+        _lima_error ccdname ; printf("No BPM plugin exported\n")
+    } else {
+        LIMA_DEV[ccdname]["bpmdev"] = bpmdev
+    }
+    list_test LIMA_BPM
+    cdef("user_getcounts", "_limabpm_getcounts\n", "limabpm", 0x10)
+    setup_tail("limabpm", ccdname)
+}'
+
+#%IU% [<ccdname>]
+def limabpmunsetup '{
+    if ($#) {
+        _limabpm_removeall("$1")
+    } else {
+        cdef("", "", "limabpm", "delete")
+        _limabpm_removeall()
+        unglobal LIMA_BPM
+    }
+}'
+
+#%IU% (name)
+def _limabpm_checkccdname(name) '{
+    local ccdname
+    ccdname = _lima_checkccdname(name)
+    if (LIMA_DEV[ccdname]["bpmdev"] == 0) {
+        _lima_error ccdname ; printf("No BPM plugin exported\n")
+        exit
+    }
+    return ccdname
+}'
+
+#%UU% <ccdname>
+#%MDESC%
+# Remove all configured bpm counters for given camera
+#
+def limabpmremoveall '{
+    local ccdname
+    if ($#!=1) {
+        print "Usage: $0 <ccdname>"
+        print "  If <ccdname>==\"*\", remove bpm counters on all ccds"
+        print "  Otherwise, remove all bpm counters for given camera"
+        exit
+    }
+    if ("$1"=="*") {
+        _limabpm_removeall()
+    } else {
+        ccdname = _lima_checkccdname("$1")
+        _limabpm_removeall(ccdname)
+    }
+}'
+
+#%IU% (ccdname)
+def _limabpm_removeall(ccdname) '{
+    local ibpm bname nbpm
+    local bdel[] ndel idel
+    if (!ccdname) {
+        list_init LIMA_BPM
+    } else {
+        nbpm= list_n(LIMA_BPM)
+        for (ibpm = 1; ibpm <= nbpm; ibpm++) {
+            bname = list_item(LIMA_BPM, ibpm)
+            if (LIMA_BPM[bname]["ccdname"] == ccdname) {
+                bdel[ndel++]= bname
+            }
+        }
+        for (idel=0; idel<ndel; idel++) {
+            list_remove(LIMA_BPM, bdel[idel])
+        }
+    }
+}'
+
+#%UU% <ccdname> <cntmne> <bpmtype>
+#%MDESC%
+# Add a BPM counter for camera <ccdname> called <cntmne>.
+# %B%bpmtype%B% can be one of:
+# %BR% - timestamp
+# %BR% - intensity
+# %BR% - center_x
+# %BR% - center_y
+# %BR% - fwhm_x
+# %BR% - fwhm_y
+#
+def limabpmadd '{
+    local ccdname bpmtype bpmmne
+    if (!$#) {
+        print "Usage: $0 <ccdname> <cntmne> <bpmtype>"
+        print "Where <bpmtype> can be:"
+        print "    - timestamp"
+        print "    - intensity"
+        print "    - center_x"
+        print "    - center_y"
+        print "    - fwhm_x"
+        print "    - fwhm_y"
+        exit
+    }
+    ccdname = _limabpm_checkccdname("$1")
+    bpmmne = "$2"
+    bpmtype = "$3"
+    if (_limabpm_gettypeidx(bpmtype) < 0) {
+        _lima_error ccdname ; printf("Invalid bpm type\n")
+        exit
+    }
+    if (cnt_num(bpmmne) < 0) {
+        _lima_error ccdname ; printf("Invalid counter mnemonic\n")
+        exit
+    }
+    
+    if (list_item(LIMA_BPM, bpmmne) < 0) {
+        list_add(LIMA_BPM, bpmmne)
+    }
+    LIMA_BPM[bpmmne]["ccdname"]= ccdname
+    LIMA_BPM[bpmmne]["type"]= bpmtype
+}'
+
+#%IU% (bpmtype)
+def _limabpm_gettypeidx(bpmtype) '{
+    local BPM_TYPES[]
+    BPM_TYPES["timestamp"]= 0
+    BPM_TYPES["intensity"]= 1
+    BPM_TYPES["center_x"]= 2
+    BPM_TYPES["center_y"]= 3
+    BPM_TYPES["fwhm_x"]= 4
+    BPM_TYPES["fwhm_y"]= 5
+
+    if (bpmtype in BPM_TYPES) {
+        return BPM_TYPES[bpmtype]
+    }
+    return (-1)
+}'
+    
+#%UU% <cntmne>
+#%MDESC% 
+# Remove one counter
+#
+def limabpmremove '{
+    if (!$#) {
+        print "Usage: $0 <cntmne>"
+        exit
+    }
+    bname = "$1"
+    list_remove(LIMA_BPM, bname)
+}'
+
+#%UU% <ccdname>
+#%MDESC%
+# Activate BPM plugin on lima server
+#
+def limabpmon '{
+    local ccdname bpmdev state
+    if (!$#) {
+        print "Usage: $0 <ccdname>"
+        exit
+    }
+    ccdname = _limabpm_checkccdname("$1")
+    bpmdev = LIMA_DEV[ccdname]["bpmdev"]
+    state = tango_io(bpmdev, "State")
+    if (state != 0) {
+        tango_io(bpmdev, "Start")
+    }
+}'
+
+#%UU% <ccdname>
+#%MDESC%
+# Switch off the bpm plugin on lima server
+#
+def limabpmoff '{
+    local ccdname bpmdev
+    if (!$#) {
+        print "Usage: $0 <ccdname>"
+        exit
+    }
+    ccdname = _limabpm_checkccdname("$1")
+    bpmdev = LIMA_DEV[ccdname]["bpmdev"]
+    tango_io(bpmdev, "Stop")
+}'
+
+#%UU% [<ccdname>]
+#%MDESC%
+# Print out BPM plugin status and configured counters
+#
+def limabpmstatus '{
+    local idev ccdname
+
+    if ($#==1) {
+        ccdname= _limabpm_checkccdname("$1")
+        _limabpm_status(ccdname)
+    } else {
+        for (idev= 1; idev<=list_n(LIMA_DEV); idev++) {
+            ccdname= list_item(LIMA_DEV, idev)
+            if (LIMA_DEV[ccdname]["bpmdev"] != 0) {
+                _limabpm_status(ccdname)
+            }
+        }
+    }
+}'
+
+#%IU% (ccdname)
+def _limabpm_status(ccdname) '{
+    local state ncnt icnt cname
+
+    state= tango_io(LIMA_DEV[ccdname]["bpmdev"], "State")
+    _lima_trace ccdname
+    printf("BPM is ")
+    tty_cntl("md")
+    printf("%s\n", state==0?"ON":"OFF")
+    tty_cntl("me")
+
+    ncnt= 0
+    for (icnt= 1; icnt <= list_n(LIMA_BPM); icnt++) {
+        cname= list_item(LIMA_BPM, icnt)
+        if (LIMA_BPM[cname]["ccdname"]==ccdname) {
+            if (!ncnt) print "\tConfigured counters:"
+            printf("\t* %-8s [%s]\n", cname, LIMA_BPM[cname]["type"])
+            ncnt += 1
+        }
+    }
+    if (!ncnt) {
+        print "\tNo BPM counters configured"
+    }
+}'
+
+#%IU%
+def _limabpm_getcounts '{
+    local ibpm bidx bccd bname
+    local ccdname ccdunit bstate
+    local ccds[] cnts[] datas[]
+
+    for (ibpm= 1; ibpm<=list_n(LIMA_BPM); ibpm++) {
+        bname= list_item(LIMA_BPM, ibpm)
+        if ((cnt_num(bname)!=-1) && (counter_par(bname, "disable")!=1)) {
+            S[cnt_num(bname)]= -1
+            bidx= _limabpm_gettypeidx(LIMA_BPM[bname]["type"])
+            ccdname= LIMA_BPM[bname]["ccdname"]
+            ccdunit= LIMA_DEV[ccdname]["unit"]
+            bstate= tango_io(LIMA_DEV[ccdname]["bpmdev"], "State")
+            if ((bidx != -1)&&(CCD_ON[ccdunit])&&(bstate==0)) {
+                cnts[ccdname][bname]= bidx
+                ccds[ccdname] += 1
+            }
+        }
+    }
+
+    for (ccdname in ccds) {
+        bpmdev= LIMA_DEV[ccdname]["bpmdev"]
+        # print "read", bpmdev
+        nread= tango_io(bpmdev, "getResults", 0, datas)
+        if (nread < 7) {
+            _lima_error ccdname ; print("Failed to read BPM counters\n")
+        } else {
+            for (cmne in cnts[ccdname]) {
+                # print "update", cmne
+                S[cnt_num(cmne)]= datas[cnts[ccdname][cmne]]
+            }
+        }
+    }
+}'
+
+#%UU% <ccdname> [take|reset|status]
+#%MDESC%
+# BPM background operation
+#%BR% %B%take%B% : acquire one image and keep it for bpm background
+#%BR% %B%reset%B% : remove background image on server
+#%BR% %B%status%B% : is a background image present or not
+#
+def limabpmbackground '{
+    local ccdname bgcmd bpmdev state
+
+    if (!$#) {
+        print "Usage: $0 <ccdname> [\"take\"|\"reset\"|\"status\"]"
+        exit
+    }
+    ccdname= _limabpm_checkccdname("$1")
+    bgcmd= $#>1 ? "$2" : "status"
+
+    bpmdev= LIMA_DEV[ccdname]["bpmdev"]
+    state= tango_io(bpmdev, "State")
+    if (state != 0) {
+        _lima_error ccdname ; print "Activate BPM before using it !! (limabpmon)"
+        exit
+    }
+
+    if (bgcmd == "take") {
+        tango_io(bpmdev, "TakeBackground")
+        _lima_trace ccdname ; print "BPM background image acquired."
+    } else if (bgcmd == "reset") {
+        tango_io(bpmdev, "ResetBackground")
+        _lima_trace ccdname ; print "BPM background image removed."
+    } else if (bgcmd == "status") {
+        state= tango_io(bpmdev, "HasBackground")
+        _lima_trace ccdname
+        printf("BPM %s a background image\n", state==1?"has":"has NOT")
+    } else {
+        _lima_error ccdname; print "Invalid BPM background command"
+    }
+}'
+
+#%MACROS%
+#%IMACROS%
+#%TOC%
+#%AUTHOR% E.Papillon
+

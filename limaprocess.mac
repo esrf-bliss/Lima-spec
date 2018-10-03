@@ -231,6 +231,8 @@ def _lima_get_plugin_devicename(ccdname, type) '{
 #%DESC% return true if the ccd device is responsive and active in the config
 # (not OFF)
 def limaccdcheck(dev) '{
+  if (image_par(dev,"unusable") == 1) return 0
+
   if (image_par(dev, "responsive") == 1 ) {
     return 1
   }

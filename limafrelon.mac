@@ -4,6 +4,8 @@
 
 #%LOG%
 #
+#$Revision: $
+#
 
 def limafrelonsetup(ccdname) '{
 
@@ -20,6 +22,7 @@ def limafrelonsetup(ccdname) '{
   _limapar_addconfig(ccdname, "spb2_config",LP_RW|LP_LIST,1)
   _limapar_addconfig(ccdname, "readout_time",LP_READ,1)
   _limapar_addconfig(ccdname, "transfer_time",LP_READ,1)
+  _limapar_addconfig(ccdname, "camera_serial", LP_READ, 1)
 
   # --- callback macro on parameter set
   _limapar_addconfig_cb(ccdname, "_limafrelon_setpar")
@@ -34,6 +37,7 @@ def limafrelonsetup(ccdname) '{
   _limapar_addtext(ccdname, "spb2_config","SPB2 read mode")
   _limapar_addtext(ccdname, "readout_time","Camera readout time (sec)")
   _limapar_addtext(ccdname, "transfer_time","Camera transfer time (sec)")
+  _limapar_addtext(ccdname, "camera_serial","Camera serial number")
 }'
 
 lima_addlimatype("Frelon", "limafrelonsetup", "limafrelonmenu")
@@ -115,4 +119,4 @@ def limafrelonmenu(ccdname) '{
 #%MACROS%
 #%IMACROS%
 #%TOC%
-#%AUTHOR% E.Papillon
+#%AUTHOR% E.Papillon, $Revision: $, $Date: $

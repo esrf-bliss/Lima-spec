@@ -23,8 +23,10 @@ def limaimeigersetup(ccdname) '{
   _limapar_addconfig(ccdname, "efficiency_correction", LP_RW|LP_LIST, 1)
   _limapar_addconfig(ccdname, "virtual_pixel_correction", LP_RW|LP_LIST, 1)
   _limapar_addconfig(ccdname, "pixel_mask", LP_RW|LP_LIST, 1)
+  _limapar_addconfig(ccdname, "compression_type", LP_RW|LP_LIST, 1)
   _limapar_addconfig(ccdname, "threshold_energy", LP_RW|LP_MOT, 1)
   _limapar_addconfig(ccdname, "photon_energy", LP_RW|LP_MOT, 1,"long")
+  _limapar_addconfig(ccdname, "serie_id", LP_RD, 1,"long")
 
   # --- parameter description
   _limapar_addtext(ccdname, "temperature", "Detector temperature")
@@ -36,8 +38,10 @@ def limaimeigersetup(ccdname) '{
   _limapar_addtext(ccdname, "efficiency_correction", "Efficiency correction")
   _limapar_addtext(ccdname, "virtual_pixel_correction", "Virtual pixel correction")
   _limapar_addtext(ccdname, "pixel_mask", "Pixel mask")
+  _limapar_addtext(ccdname, "compression_type", "Compression type")
   _limapar_addtext(ccdname, "threshold_energy", "Threshold Energy (Ev)")
   _limapar_addtext(ccdname, "photon_energy", "Photon energy (Working energy in Ev)")
+  _limapar_addtext(ccdname, "serie_id", "Filewriter file name serie ID")
 
   # --- timeout
   tango_io(LIMA_DEV[ccdname]["control"],"timeout",120)
@@ -72,8 +76,10 @@ def limaimeigermenu(ccdname) '{
   items["efficiency_correction"] = ""
   items["virtual_pixel_correction"] = ""
   items["pixel_mask"] = ""
+  items["compression_type"] = ""
   items["threshold_energy"] = ""
   items["photon_energy"] = ""
+  items["serie_id"] = ""
 
   option= 1
   while (option) {
@@ -90,6 +96,7 @@ def limaimeigermenu(ccdname) '{
       _limamenu_printitem(ccdname, "efficiency_correction", items["efficiency_correction"], nl++, 14)
       _limamenu_printitem(ccdname, "virtual_pixel_correction", items["virtual_pixel_correction"], nl++, 15)
       _limamenu_printitem(ccdname, "pixel_mask", items["pixel_mask"], nl++, 16)
+      _limamenu_printitem(ccdname, "compression_type", items["compression_type"], nl++, 17)
 
       tty_move(0,++nl,"(2) Calibration :")
       ++nl
@@ -100,6 +107,7 @@ def limaimeigermenu(ccdname) '{
       ++nl
       _limamenu_printitem(ccdname, "temperature", items["temperature"], nl++, 31)
       _limamenu_printitem(ccdname, "humidity", items["humidity"], nl++, 33)
+      _limamenu_printitem(ccdname, "serie_id", items["serie_id"], nl++, 34)
 
       option= getval("\n\n\tOption ---> ", 0)
       printf("\n\n")
@@ -116,6 +124,8 @@ def limaimeigermenu(ccdname) '{
 	  _limapar_ask(ccdname, "virtual_pixel_correction", items["virtual_pixel_correction"])
       if ((option==1)||(option==16))
 	  _limapar_ask(ccdname, "pixel_mask", items["pixel_mask"])
+      if ((option==1)||(option==17))
+	  _limapar_ask(ccdname, "compression_type", items["compression_type"])
 
       if ((option==2)||(option==21))
 	  _limapar_ask(ccdname, "photon_energy", items["photon_energy"])

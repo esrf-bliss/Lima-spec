@@ -18,6 +18,7 @@ def limaimeigersetup(ccdname) '{
   _limapar_addconfig(ccdname, "humidity", LP_RW, 1)
   _limapar_addconfig(ccdname, "plugin_status", LP_RD|LP_LIST, 1)
   _limapar_addconfig(ccdname, "cam_status", LP_RD|LP_LIST, 1)
+  _limapar_addconfig(ccdname, "stream_stats", LP_RD, 4, "double")
 
   _limapar_addconfig(ccdname, "countrate_correction", LP_RW|LP_LIST, 1)
   _limapar_addconfig(ccdname, "flatfield_correction", LP_RW|LP_LIST, 1)
@@ -35,6 +36,7 @@ def limaimeigersetup(ccdname) '{
   _limapar_addtext(ccdname, "humidity", "Detector humidity")
   _limapar_addtext(ccdname, "plugin_status", "Lima plugin status")
   _limapar_addtext(ccdname, "cam_status", "Camera API status")
+  _limapar_addtext(ccdname, "stream_stats", "Stream statistics")
 
   _limapar_addtext(ccdname, "countrate_correction", "Countrate correction")
   _limapar_addtext(ccdname, "flatfield_correction", "Flatfield correction")
@@ -79,7 +81,7 @@ def _limaimeiger_update_image_size(ccdname) '{
 }'
 
 def limaimeigermenu(ccdname) '{
-  local items[] parname
+  local items[] aux_arr[] parname stream_stats
   local nl option
 
   items["temperature"] = ""
@@ -99,10 +101,19 @@ def limaimeigermenu(ccdname) '{
 
   option= 1
   while (option) {
+      local one_mega one_giga
+      one_mega = 1024 * 1024
+      one_giga = one_mega * 1024
+
       for (parname in items) {
 	  items[parname]= _limapar_get(ccdname, parname)
       }
       
+      _limapar_get(ccdname, "stream_stats", -1)
+      stream_stats = sprintf("%d frames, %.3f MB, %.3f ms, %.3f GB/s   ", \
+                             LIMA_VALS[0], LIMA_VALS[1] / one_mega, \
+			     LIMA_VALS[2] / 1e-3, LIMA_VALS[3] / one_giga)
+
       nl = _limamenu_printtitle(ccdname,"Configuration","config")
 
       tty_move(0,nl++,"(1) Configuration :")
@@ -126,6 +137,7 @@ def limaimeigermenu(ccdname) '{
       _limamenu_printitem(ccdname, "serie_id", items["serie_id"], nl++, 34)
       _limamenu_printitem(ccdname, "plugin_status", items["plugin_status"], nl++, 35)
       _limamenu_printitem(ccdname, "cam_status", items["cam_status"], nl++, 36)
+      _limamenu_printitem(ccdname, "stream_stats", stream_stats, nl++, 37)
 
       tty_move(0,++nl,"(4) Detector commands :")
       ++nl

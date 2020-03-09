@@ -585,6 +585,7 @@ def _limapar_controlinit(ccdname, version) '{
       "Is server ready for next image in current acquisition")
 
   # --- saving
+  _limapar_addcontrol(ccdname, "saving_managed_mode", LP_RW|LP_LIST, 1)
   _limapar_addcontrol(ccdname, "saving_mode", LP_RW|LP_LIST, 1)
   _limapar_addcontrol(ccdname, "saving_format", LP_RW|LP_LIST, 1)
   _limapar_addcontrol(ccdname, "saving_index_format", LP_RW, 1)
@@ -599,6 +600,7 @@ def _limapar_controlinit(ccdname, version) '{
   _limapar_addcontrol(ccdname, "saving_statistics", LP_READ, 4)
   _limapar_addcontrol(ccdname, "saving_statistics_history", LP_RW, 1)
 
+  _limapar_addtext(ccdname, "saving_managed_mode", "Saving managed mode")
   _limapar_addtext(ccdname, "saving_mode", "Saving mode")
   _limapar_addtext(ccdname, "saving_format", "Saving file format")
   _limapar_addtext(ccdname, "saving_index_format", "Saving index format")

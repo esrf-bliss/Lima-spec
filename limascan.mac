@@ -72,7 +72,7 @@ def limamulttrigscanoff '{
 }'
 
 def limamulttrigscanoff_func(lima_name) '{
-    local lima_name lima_n i all_off
+    local lima_n i all_off
 
     lima_name = _lima_checkccdname(lima_name)
     lima_n = list_check(LIMA_DEV, lima_name)
@@ -125,7 +125,7 @@ def lima_mult_trig_tail(from_cleanup) '{
 
 def lima_mult_trig_on(lima_name, nb_points) '{
     local lima_n ccd_u taco_dev tango_dev trig_gen is_soft good_soft
-    local lima_acq_mode lima_trig_mode ccd_trig_mode
+    local lima_acq_mode lima_trig_mode ccd_trig_mode prev_ccd_trig_mode
     local det_exp det_dtime det_pulses skip_frame_freq
     
     lima_n = list_check(LIMA_DEV, lima_name)
@@ -143,7 +143,7 @@ def lima_mult_trig_on(lima_name, nb_points) '{
     }
 
     ccd_u = list_getpar(LIMA_DEV, lima_n, "unit")
-    ccd_trig_mode = image_par(ccd_u, "ext_trig")
+    ccd_trig_mode = prev_ccd_trig_mode = image_par(ccd_u, "ext_trig")
     if (lima_trig_mode == "INTERNAL_TRIGGER") {
         lima_trig_mode = "INTERNAL_TRIGGER_MULTI"
     } else if (lima_trig_mode == "EXTERNAL_TRIGGER") {
@@ -152,7 +152,9 @@ def lima_mult_trig_on(lima_name, nb_points) '{
     }
     if (!_limapar_set(lima_name, "acq_trigger_mode", lima_trig_mode))
         exit
-    image_par(ccd_u, "ext_trig", ccd_trig_mode)
+
+    if (ccd_trig_mode != prev_ccd_trig_mode)
+        image_par(ccd_u, "ext_trig", ccd_trig_mode)
     CCD_TRIG[ccd_u] = ccd_trig_mode
 
     taco_dev = image_par(ccd_u, "device_id")

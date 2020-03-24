@@ -126,20 +126,20 @@ def limabpmremove '{
 # Remove the specified BPM
 #
 def _limabpm_remove(bpmmne) '{
-  local bpmnum ccdname
+    local bpmnum ccdname
 
-  ccdname = __LIMA_BPM[bpmmne]["ccdname"]
+    ccdname = __LIMA_BPM[bpmmne]["ccdname"]
 
-  if ((bpmnum = cnt_num(bpmmne)) != -1) {
-    S[bpmnum] = (1e1000/1e1000) #NaN
-  }
-  #clean  associative arrays up in case someone is using them
-  #via the user_ hook macros (e.i zaplima.mac !!)
-  list_remove(__LIMA_BPM, bpmmne)
+    if ((bpmnum = cnt_num(bpmmne)) != -1) {
+        S[bpmnum] = (1e1000/1e1000) #NaN
+    }
+    #clean  associative arrays up in case someone is using them
+    #via the user_ hook macros (e.i zaplima.mac !!)
+    list_remove(__LIMA_BPM, bpmmne)
 
-  user_limabpm_remove ccdname bpmmne
+    user_limabpm_remove ccdname bpmmne
 
-  user2_limabpm_remove ccdname bpmmne
+    user2_limabpm_remove ccdname bpmmne
 }'
 
 #%UU% <ccdname>
@@ -148,37 +148,37 @@ def _limabpm_remove(bpmmne) '{
 #%BR% if <ccdname> == %B%*%B%, remove all BPMs for all CCDs
 #
 def limabpmremoveall '{
-  local ccdname
-  if ($#!= 1) {
-    print "Usage: $0 <ccdname>"
-    print "  If <ccdname> == \"*\", remove bpms on all ccds"
-    exit
-  }
-  ccdname = "$1"
-  if ((ccdname != "*") && (list_check(LIMA_DEV, ccdname) <= 0)) {
-    _lima_error ; printf("Unknown LIMA CCD <%s>\n", ccdname)
-  } else {
-    _limabpm_removeall(ccdname)
-  }
+    local ccdname
+    if ($#!= 1) {
+        print "Usage: $0 <ccdname>"
+        print "  If <ccdname> == \"*\", remove bpms on all ccds"
+        exit
+    }
+    ccdname = "$1"
+    if ((ccdname != "*") && (list_check(LIMA_DEV, ccdname) <= 0)) {
+        _lima_error ; printf("Unknown LIMA CCD <%s>\n", ccdname)
+    } else {
+        _limabpm_removeall(ccdname)
+    }
 }'
 
 #%IU%
 #%MDESC%
 def _limabpm_removeall(ccdname) '{
-  local ibpm bpmmne nbpm delbpm[]
+    local ibpm bpmmne nbpm delbpm[]
 
-  if ((!ccdname)||(ccdname == "*")) {
-    for (ibpm = 1; ibpm <= list_n(__LIMA_BPM); ibpm++) {
-      bpmmne = list_item(__LIMA_BPM, ibpm)
-      _limabpm_remove(bpmmne)
-    }
-  } else {
+    if ((!ccdname)||(ccdname == "*")) {
+        for (ibpm = 1; ibpm <= list_n(__LIMA_BPM); ibpm++) {
+            bpmmne = list_item(__LIMA_BPM, ibpm)
+            _limabpm_remove(bpmmne)
+        }
+    } else {
     nbpm = _limabpm_getbpms(ccdname, delbpm)
-    for (ibpm = 0; ibpm < nbpm; ibpm++) {
-      bpmmne = delbpm[ibpm]
-      _limabpm_remove(bpmmne)
+        for (ibpm = 0; ibpm < nbpm; ibpm++) {
+              bpmmne = delbpm[ibpm]
+            _limabpm_remove(bpmmne)
+        }
     }
-  }
 }'
 
 
@@ -187,15 +187,15 @@ def _limabpm_removeall(ccdname) '{
 #Return the number of bpms and their mnemonic in input bpm array
 #
 def _limabpm_getbpms(ccdname, bpms) '{
-  local ibpm bpmmne nbpm
-  nbpm = 0
-  for (ibpm = 1; ibpm <= list_n(__LIMA_BPM); ibpm++) {
-    bpmmne = list_item(__LIMA_BPM, ibpm)
-    if (__LIMA_BPM[bpmmne]["ccdname"] == ccdname) {
-       bpms[nbpm++] = bpmmne
+    local ibpm bpmmne nbpm
+    nbpm = 0
+    for (ibpm = 1; ibpm <= list_n(__LIMA_BPM); ibpm++) {
+        bpmmne = list_item(__LIMA_BPM, ibpm)
+        if (__LIMA_BPM[bpmmne]["ccdname"] == ccdname) {
+           bpms[nbpm++] = bpmmne
+        }
     }
-  }
-  return (nbpm)
+    return (nbpm)
 }'
 
 
@@ -204,18 +204,18 @@ def _limabpm_getbpms(ccdname, bpms) '{
 #Return the number of configured and enabled bpms and their mnemonic in input bpms array
 #
 def _limabpm_getbpmactive(ccdname, bpms) '{
-  local ibpm bpmmne bpmnum nbpm
-  nbpm = 0
-  for (ibpm =1; ibpm <= list_n(__LIMA_BPM); ibpm++) {
-    bpmmne = list_item(__LIMA_BPM, ibpm)
-    if (__LIMA_BPM[bpmmne]["ccdname"] == ccdname) {
-      bpmnum = cnt_num(bpmmne)
-      if ((bpmnum != -1)&&(counter_par(bpmnum, "disable") != 1)) {
-        bpms[nbpm++] = bpmmne
-      }
+    local ibpm bpmmne bpmnum nbpm
+    nbpm = 0
+    for (ibpm =1; ibpm <= list_n(__LIMA_BPM); ibpm++) {
+        bpmmne = list_item(__LIMA_BPM, ibpm)
+            if (__LIMA_BPM[bpmmne]["ccdname"] == ccdname) {
+                bpmnum = cnt_num(bpmmne)
+                if ((bpmnum != -1)&&(counter_par(bpmnum, "disable") != 1)) {
+                    bpms[nbpm++] = bpmmne
+            }
+        }
     }
-  }
-  return (nbpm)
+    return (nbpm)
 }'
 
 
@@ -224,18 +224,18 @@ def _limabpm_getbpmactive(ccdname, bpms) '{
 #Rename the BPM <old_mne> to <new_mne> keeping same BPM parameters
 #
 def limabpmrename '{
-  local oldmne newmne
-  if ($#!= 2) {
-    print "Usage: $0 <old_mne> <new_mne>"
-    exit
-  }
-  oldmne = "$1"
-  newmne = "$2"
-  if (list_check(__LIMA_BPM, oldmne) <= 0) {
-    _lima_error ; printf("Unknown BPM <%s>\n", oldmne)
-  } else {
-    _limabpm_rename(oldmne, newmne)
-  }
+    local oldmne newmne
+    if ($#!= 2) {
+        print "Usage: $0 <old_mne> <new_mne>"
+        exit
+    }
+    oldmne = "$1"
+    newmne = "$2"
+    if (list_check(__LIMA_BPM, oldmne) <= 0) {
+        _lima_error ; printf("Unknown BPM <%s>\n", oldmne)
+    } else {
+        _limabpm_rename(oldmne, newmne)
+    }
 }'
 
 #%IU% (old_mne, new_mne)
@@ -293,29 +293,34 @@ def _limabpm_getcounts '{
 #Show a menu allowing all modification on BPMs settings
 #
 def limabpm '{
-  local ccdname idev
+    local ccdname idev
 
-  ccdname = ($#== 1) ? "$1" : 0
-  if (ccdname) {
-    if (list_check(LIMA_DEV, ccdname) <= 0) {
-      _lima_error ; printf("Unknown LIMA CCD <%s>\n", ccdname)
-    } else {
-      _limabpm_menu(ccdname)
+    if (whatis("spec_menu")) {
+        _limabpm_spec_menu()
+        exit
     }
-  } else {
-    if (list_n(LIMA_DEV) == 1) {
-      idev = 1
+
+    ccdname = ($#== 1) ? "$1" : 0
+    if (ccdname) {
+        if (list_check(LIMA_DEV, ccdname) <= 0) {
+          _lima_error ; printf("Unknown LIMA CCD <%s>\n", ccdname)
+        } else {
+          _limabpm_menu(ccdname)
+        }
     } else {
-      for (idev = 1; idev <= list_n(LIMA_DEV); idev++) {
-        ccdname = list_item(LIMA_DEV, idev)
-        printf(" (%d) %s (%s, %s)\n", idev, ccdname, \
-              LIMA_DEV[ccdname]["control"], LIMA_DEV[ccdname]["config"])
-      }
-      idev = getval(" >> Select one CCD", 0)
+        if (list_n(LIMA_DEV) == 1) {
+          idev = 1
+        } else {
+          for (idev = 1; idev <= list_n(LIMA_DEV); idev++) {
+            ccdname = list_item(LIMA_DEV, idev)
+            printf(" (%d) %s (%s, %s)\n", idev, ccdname, \
+                  LIMA_DEV[ccdname]["control"], LIMA_DEV[ccdname]["config"])
+          }
+          idev = getval(" >> Select one CCD", 0)
+        }
+        if ((idev>0)&&(idev <= list_n(LIMA_DEV)))
+          _limabpm_menu(list_item(LIMA_DEV, idev))
     }
-    if ((idev>0)&&(idev <= list_n(LIMA_DEV)))
-      _limabpm_menu(list_item(LIMA_DEV, idev))
-  }
 }'
 
 #%IU% (ccdname)
@@ -324,7 +329,7 @@ def limabpm '{
 #
 def _limabpm_menu(ccdname)'{
     local nb key
-    local cmne bpmtype xmin xmax ymin ymax
+    local cmne bpmtype
     local ccdunit
     local file
 
@@ -402,13 +407,13 @@ def _limabpm_menuhead(ccdname) '{
 #%BR% If not, return 0 and print an error message
 #
 def _limabpm_server_getds(ccdname) '{
-  local bpmsrv
-  bpmsrv = list_getpar(LIMA_DEV, ccdname, "bpmcounter")
-  if (!bpmsrv) {
-    _lima_error ccdname ; printf("No BPM counter device configured !!")
+    local bpmsrv
+    bpmsrv = list_getpar(LIMA_DEV, ccdname, "bpmcounter")
+    if (!bpmsrv) {
+        _lima_error ccdname ; printf("No BPM counter device configured !!")
     return (0)
-  }
-  return (bpmsrv)
+    }
+    return (bpmsrv)
 }'
 
 

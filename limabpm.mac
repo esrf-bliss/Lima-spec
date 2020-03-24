@@ -373,6 +373,92 @@ def _limabpm_menu(ccdname)'{
     }
 }'
 
+
+#%IU% (ccdname)
+#%MDESC%
+#Menu to Add/Modify/Delete BPMs using spec_menu()
+def _limabpm_spec_menu()'{
+    local bpmtype i j ccdname
+
+    if (COUNTERS == 0) {
+            print "No counters."
+            exit
+    }
+
+    local menu[], mne, cname, CNT_LIST, BPM_TYPES, x, bpmmne, bpmnum
+    local refer[], varvar
+    x = "intensity x y fwhm_x fwhm_y"
+    split(x, BPM_TYPES)
+    # attempt to setup a spec_menu to make input easier
+    # i = 2
+    menu[0]["title"] = "LIMA Beam Position Monitors"
+    menu[i++]["head"]  = "Counter configuration menu"
+    menu[i++]["width"] = 90
+    for (i = j = 0, s = sep = ""; i < COUNTERS; i++, sep = " ") {
+        mne  = cnt_mne(i)
+        cname = cnt_name(i)
+        if (mne == "sec" || mne == "mon" || mne == "det")
+            continue
+        if (counter_par(i, "disable"))
+            continue
+        else {
+            CNT_LIST = CNT_LIST " " mne
+            # if (mne in __LIMA_BPM) {
+                refer[__LIMA_BPM[mne]["ccdname"]][__LIMA_BPM[mne]["type"]] = mne
+            # }
+            j ++
+        }
+    }
+    CNT_LIST = CNT_LIST " none"
+    local x
+    i = 3
+    if (j == 0) {
+        print "All counters are disabled."
+        exit
+    }
+    for (x = 1; x <= LIMA_DEV["0"]; x++) {
+        ccdname = LIMA_DEV[x]
+        menu[i++]["subhead"] = sprintf("\tBPMs for %-15s", ccdname)
+        menu[i++]["desc"] = ""
+        for (j in BPM_TYPES) {
+            bpmtype = BPM_TYPES[j]
+            menu[i]["desc"]  = sprintf("%-12s", bpmtype)
+            menu[i]["list"]  = CNT_LIST
+            bpmmne  = refer[ccdname][bpmtype]
+            varvar = "value" ccdname bpmtype
+            oldvarvar = "old" varvar
+            if ((bpmmne) && (__LIMA_BPM[bpmmne]["ccdname"] == ccdname)) {
+                @varvar = @oldvarvar = bpmmne
+            } else {
+                @varvar = @oldvarvar = "none"
+            }
+            menu[i]["@"] =  varvar
+            menu[i]["info"] =  "set counter for " ccdname " " bpmtype
+            i ++
+        }
+        menu[i++]["desc"] = ""
+    }
+
+    local mymodes
+    mymodes = 0
+    # only bit # 1 is set!
+    mymodes = spec_menu(menu)
+
+    for (x = 1; x <= LIMA_DEV["0"]; x++) {
+        ccdname = LIMA_DEV[x]
+        for (j in BPM_TYPES) {
+            bpmtype = BPM_TYPES[j]
+            bpmmne  = refer[ccdname][bpmtype]
+            varvar = "value" ccdname bpmtype
+            oldvarvar = "old" varvar
+            if ((@varvar != @oldvarvar) && (@varvar != "none")) {
+                _limabpm_remove(bpmmne)
+                _limabpm_add(ccdname, @varvar, bpmtype)
+            }
+        }
+    }
+}'
+
 #%IU% (ccdname)
 #%MDESC%
 #Shows BPMs definition for CCD <ccdname>

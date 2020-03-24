@@ -578,6 +578,46 @@ def limabpmbackground '{
 }'
 
 
+#%UU% <ccdname> [take|reset|status]
+#%MDESC%
+# BPM background operation
+#%BR% %B%take%B% : acquire one image and keep it for bpm background
+#%BR% %B%reset%B% : remove background image on server
+#%BR% %B%status%B% : is a background image present or not
+#
+def limabpmbackground '{
+    local ccdname bgcmd bpmdev state
+
+    if (!$#) {
+        print "Usage: $0 <ccdname> [\"take\"|\"reset\"|\"status\"]"
+        exit
+    }
+    ccdname= _lima_checkccdname("$1")
+    bgcmd= $#>1 ? "$2" : "status"
+
+    bpmdev= LIMA_DEV[ccdname]["bpmdev"]
+    state= tango_io(bpmdev, "State")
+    if (state != 0) {
+        _lima_error ccdname ; print "Activate BPM before using it !! (limabpmon)"
+        exit
+    }
+
+    if (bgcmd == "take") {
+        tango_io(bpmdev, "TakeBackground")
+        _lima_trace ccdname ; print "BPM background image acquired."
+    } else if (bgcmd == "reset") {
+        tango_io(bpmdev, "ResetBackground")
+        _lima_trace ccdname ; print "BPM background image removed."
+    } else if (bgcmd == "status") {
+        state= tango_io(bpmdev, "HasBackground")
+        _lima_trace ccdname
+        printf("BPM %s a background image\n", state==1?"has":"has NOT")
+    } else {
+        _lima_error ccdname; print "Invalid BPM background command"
+    }
+}'
+
+
 #%MACROS%
 #%IMACROS%
 #%TOC%

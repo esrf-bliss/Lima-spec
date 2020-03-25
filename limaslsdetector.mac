@@ -17,12 +17,10 @@ def _limaslsdetector_setup(ccdname) '{
   _limapar_addconfig(ccdname, "config_fname", LP_READ, 1)
   _limapar_addconfig(ccdname, "hostname_list", LP_READ, 64)
   _limapar_addconfig(ccdname, "dac_name_list", LP_READ, 64)
-  _limapar_addconfig(ccdname, "dac_name_list_mv", LP_READ, 64)
   _limapar_addconfig(ccdname, "adc_name_list", LP_READ, 64)
 
   _limapar_addconfig(ccdname, "pixel_depth", LP_RW|LP_LIST|LP_CB, 1)
   _limapar_addconfig(ccdname, "raw_mode", LP_RW|LP_CB, 1)
-  _limapar_addconfig(ccdname, "show_mv", LP_RW, 1)
   _limapar_addconfig(ccdname, "tolerate_lost_packets", LP_RW, 1)
 
   _limapar_addconfig(ccdname, "clock_div", LP_RW|LP_LIST, 1)
@@ -45,12 +43,10 @@ def _limaslsdetector_setup(ccdname) '{
   _limapar_addtext(ccdname, "config_fname", "Configuration file name")
   _limapar_addtext(ccdname, "hostname_list", "Module host names")
   _limapar_addtext(ccdname, "dac_name_list", "DAC names")
-  _limapar_addtext(ccdname, "dac_name_list_mv", "mV DAC names")
   _limapar_addtext(ccdname, "adc_name_list", "ADC names")
 
   _limapar_addtext(ccdname, "pixel_depth", "Image Pixel Depth")
   _limapar_addtext(ccdname, "raw_mode", "Raw Image Mode")
-  _limapar_addtext(ccdname, "show_mv", "Show DAC values in milli-volts")
   _limapar_addtext(ccdname, "tolerate_lost_packets", "Tolerate Lost Packets")
 
   _limapar_addtext(ccdname, "clock_div", "Speed Clock Divider")
@@ -71,15 +67,6 @@ def _limaslsdetector_setup(ccdname) '{
   for (i = 0; i < aux_n; i++) {
     aux_s = LIMA_VALS[i]
     aux_d = sprintf("DAC %s", substr(aux_s, 5))
-    _limapar_addconfig(ccdname, aux_s, LP_RW, 64)
-    _limapar_addtext(ccdname, aux_s, aux_d)
-  }
-
-  aux_n = _limapar_get(ccdname, "dac_name_list_mv", -1)
-  for (i = 0; i < aux_n; i++) {
-    aux_s = LIMA_VALS[i]
-    aux_k = substr(substr(aux_s, 1, length(aux_s) - 3), 5)
-    aux_d = sprintf("DAC %s (mV)", aux_k)
     _limapar_addconfig(ccdname, aux_s, LP_RW, 64)
     _limapar_addtext(ccdname, aux_s, aux_d)
   }
@@ -304,32 +291,24 @@ def _limaslsdetector_ask_mod_idx_val(ccdname, parname, idx) '{
 }'
 
 def _limaslsdetector_dac_menu(ccdname) '{
-  local items[] parname i j dac_n dac_name[] aux_n aux_s aux_v is_dac
+  local items[] parname i dac_n dac_name[] aux_n aux_s is_dac
   local nl option foption loption
 
   global LIMA_SLSDETECTOR[]
 
-  for (i = 0; i < 2; i++) {
-    parname = sprintf("dac_name_list%s", i ? "_mv" : "")
-    dac_n = _limapar_get(ccdname, parname, -1)
-    for (j = 0; j < dac_n; j++) {
-      dac_name[j] = LIMA_VALS[j]
-      items[dac_name[j]] = ""
-    }
+  dac_n = _limapar_get(ccdname, "dac_name_list", -1)
+  for (i = 0; i < dac_n; i++) {
+    dac_name[i] = LIMA_VALS[i]
+    items[dac_name[i]] = ""
   }
 
   items["hostname_list"] = ""
-  items["show_mv"] = ""
   items["all_trim_bits"] = ""
 
   option = 1
 
   while (option) {
     for (parname in items) {
-      if (parname == "show_mv") {
-        items[parname] = LIMA_SLSDETECTOR[parname] ? "Yes" : "No"
-        continue 
-      }
       aux_n = _limapar_get(ccdname, parname, -1)
       aux_s = ""
       for (i = 0; i < aux_n; i++)
@@ -338,9 +317,7 @@ def _limaslsdetector_dac_menu(ccdname) '{
       items[parname] = sprintf("%s[ %s ]", is_dac ? "" : " ", aux_s)
     }
 
-    aux_v = (items["show_mv"] == "Yes")
-    parname = sprintf("dac_name_list%s", aux_v ? "_mv" : "")
-    dac_n = _limapar_get(ccdname, parname, -1)
+    dac_n = _limapar_get(ccdname, "dac_name_list", -1)
     for (i = 0; i < dac_n; i++)
       dac_name[i] = LIMA_VALS[i]
 
@@ -349,8 +326,6 @@ def _limaslsdetector_dac_menu(ccdname) '{
     tty_move(0, nl++, "(1) Information:")
     _limamenu_printitem(ccdname, "hostname_list", items["hostname_list"], \
 			nl++, 11)
-    _limamenu_printitem(ccdname, "show_mv", items["show_mv"], \
-			nl++, 12)
     nl++
 
     tty_move(0, nl++, "(2) DAC status:")

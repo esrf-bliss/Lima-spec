@@ -30,6 +30,7 @@ def _limaslsdetector_setup(ccdname) '{
   _limapar_addconfig(ccdname, "threshold_energy", LP_RW, 1)
   _limapar_addconfig(ccdname, "all_trim_bits", LP_RW, 64)
   _limapar_addconfig(ccdname, "high_voltage", LP_RW, 1)
+  _limapar_addconfig(ccdname, "tx_frame_delay", LP_RW, 1)
 
   _limapar_addconfig(ccdname, "skip_frame_freq", LP_RW, 1)
 
@@ -56,6 +57,7 @@ def _limaslsdetector_setup(ccdname) '{
   _limapar_addtext(ccdname, "threshold_energy", "Threshold Energy (eV)")
   _limapar_addtext(ccdname, "all_trim_bits", "Trimming bits for all pixels")
   _limapar_addtext(ccdname, "high_voltage", "High Voltage (V)")
+  _limapar_addtext(ccdname, "tx_frame_delay", "Frame Tx delay (6.2 ns units)")
 
   _limapar_addtext(ccdname, "skip_frame_freq", "Skip-frames frequency")
 
@@ -124,6 +126,7 @@ def _limaslsdetector_menu(ccdname) '{
   items["max_frame_rate"] = ""
   items["threshold_energy"] = -2
   items["high_voltage"] = ""
+  items["tx_frame_delay"] = ""
 
   aitems["hostname_list"] = ""
 
@@ -167,6 +170,8 @@ def _limaslsdetector_menu(ccdname) '{
     _limamenu_printitem(ccdname, "tolerate_lost_packets", \
                         items["tolerate_lost_packets"], \
 			nl++, 26)
+    _limamenu_printitem(ccdname, "tx_frame_delay", items["tx_frame_delay"], \
+			nl++, 27)
     nl++
 
     tty_move(0, nl++, "(3) Calibration:")
@@ -199,6 +204,8 @@ def _limaslsdetector_menu(ccdname) '{
       if (yesno("Tolerate Lost Packets", val) != val)
         _limapar_set(ccdname, "tolerate_lost_packets", !val)
     }
+    if ((option == 2) || (option == 27))
+      _limapar_ask(ccdname, "tx_frame_delay", items["tx_frame_delay"])
 
     if ((option == 3) || (option == 31))
       _limapar_ask(ccdname, "high_voltage", items["high_voltage"])

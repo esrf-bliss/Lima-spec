@@ -180,7 +180,7 @@ def lima_mult_trig_on(lima_name, nb_points) '{
         }
         det_pulses = _limapar_get(lima_name, "acc_nb_frames")
         det_exp = _limapar_get(lima_name, "acc_live_time") / det_pulses
-        det_dtime = _limapar_get(lima_name, "acc_dead_time") / (det_pulses - 1)
+        det_dtime = _limapar_get(lima_name, "latency_time")
     }
 
     skip_frame_freq = 0
@@ -247,7 +247,7 @@ def lima_mult_trig_off(lima_name) '{
 }'
 
 def lima_mult_trig_ct2_default(lima_name) '{
-    lima_mult_trig_ct2_set(lima_name, 1, 0, 1)
+    lima_mult_trig_ct2_set(lima_name, -1, 0, 1)
 }'
 
 def lima_mult_trig_ct2_set(lima_name, det_exp, det_dtime, det_pulses) '{

@@ -17,6 +17,7 @@ def limaeigersetup(ccdname) '{
   _limapar_addconfig(ccdname, "temperature", LP_RW, 1)
   _limapar_addconfig(ccdname, "humidity", LP_RW, 1)
   _limapar_addconfig(ccdname, "plugin_status", LP_RD|LP_LIST, 1)
+  _limapar_addconfig(ccdname, "high_voltage_state", LP_RD|LP_LIST, 1)
   _limapar_addconfig(ccdname, "cam_status", LP_RD|LP_LIST, 1)
   _limapar_addconfig(ccdname, "stream_stats", LP_RD, 4, "double")
 
@@ -38,6 +39,7 @@ def limaeigersetup(ccdname) '{
   _limapar_addtext(ccdname, "temperature", "Detector temperature")
   _limapar_addtext(ccdname, "humidity", "Detector humidity")
   _limapar_addtext(ccdname, "plugin_status", "Lima plugin status")
+  _limapar_addtext(ccdname, "high_voltage_state", "High voltage status")
   _limapar_addtext(ccdname, "cam_status", "Camera API status")
   _limapar_addtext(ccdname, "stream_stats", "Stream statistics")
 
@@ -63,7 +65,7 @@ def limaeigersetup(ccdname) '{
   _limapar_addtext(ccdname, "delete_memory_files", "Delete files in DCU memory")
 
   _limapar_addconfig(ccdname, "reset_high_voltage", LP_RD, 1,"long")
-  _limapar_addtext(ccdname, "reset_high_voltage", "switch off/on the high-voltage power-supply (CdTe sensors only")
+  _limapar_addtext(ccdname, "reset_high_voltage", "switch off/on the high-voltage (CdTe sensors only")
 
   # --- timeout
   tango_io(LIMA_DEV[ccdname]["control"],"timeout",120)
@@ -96,6 +98,7 @@ def limaeigermenu(ccdname) '{
   items["temperature"] = ""
   items["humidity"] = ""
   items["plugin_status"] = ""
+  items["high_voltage_state"] = ""
   items["cam_status"] = ""
   items["countrate_correction"] = ""
   items["flatfield_correction"] = ""
@@ -147,18 +150,19 @@ def limaeigermenu(ccdname) '{
 
       tty_move(0,++nl,"(3) Detector status :")
       ++nl
-      _limamenu_printitem(ccdname, "temperature", items["temperature"], nl++, 31)
-      _limamenu_printitem(ccdname, "humidity", items["humidity"], nl++, 33)
-      _limamenu_printitem(ccdname, "serie_id", items["serie_id"], nl++, 34)
-      _limamenu_printitem(ccdname, "plugin_status", items["plugin_status"], nl++, 35)
-      _limamenu_printitem(ccdname, "cam_status", items["cam_status"], nl++, 36)
-      _limamenu_printitem(ccdname, "stream_stats", stream_stats, nl++, 37)
+      _limamenu_printitem(ccdname, "temperature", items["temperature"], nl++, -1)
+      _limamenu_printitem(ccdname, "humidity", items["humidity"], nl++, -1)
+      _limamenu_printitem(ccdname, "serie_id", items["serie_id"], nl++, -1)
+      _limamenu_printitem(ccdname, "plugin_status", items["plugin_status"], nl++, -1)
+      _limamenu_printitem(ccdname, "cam_status", items["cam_status"], nl++, -1)
+      _limamenu_printitem(ccdname, "high_voltage_state", items["high_voltage_state"], nl++, -1)
+      _limamenu_printitem(ccdname, "stream_stats", stream_stats, nl++, -1)
 
       tty_move(0,++nl,"(4) Detector commands :")
       ++nl
-      _limamenu_printitem(ccdname, "initialize", "", nl++, 41)
-      _limamenu_printitem(ccdname, "delete_memory_files", "", nl++, 42)
-      _limamenu_printitem(ccdname, "reset_high_voltage", "", nl++, 43)
+      tty_move(0,nl++,"     (41) initialize")
+      tty_move(0,nl++,"     (42) delete_memory_files")
+      tty_move(0,nl++,"     (43) reset_high_voltage")
 
       option= getval("\n\n\tOption ---> ", 0)
       printf("\n\n")
@@ -199,7 +203,7 @@ def limaeigermenu(ccdname) '{
             _limaeiger_delete_memory_files_worker(ccdname)
       } else if (option==43) {
           if (yesno("Do you want to reset high-voltage", 0))
-            _limaeiger_reset_high_voltage(ccdname)
+            _limaeiger_reset_high_voltage_worker(ccdname)
       }
   }
 
@@ -258,13 +262,14 @@ def limaeigerresethighvoltage '{
   _limaeiger_reset_high_voltage_worker(ccdname)
 }'
 
-def _limaeiger_reset_high_voltage(ccdname) '{
+def _limaeiger_reset_high_voltage_worker(ccdname) '{
   local status
   tango_io(LIMA_DEV[ccdname]["config"],"resetHighVoltage")
   printf("\n\n")
   while (1) {
-    status = _limapar_get(ccdname, "plugin_status")
-    printf("Detector status: %s       \r", status)
+    sleep(0.5)
+    status = _limapar_get(ccdname, "high_voltage_state")
+    printf("High voltage status: %s       \r", status)
     if (status == "READY")
       break
     sleep(0.5)

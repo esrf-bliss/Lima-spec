@@ -5,18 +5,19 @@
 #%LOG%
 #
 
-def limaimeigersetup(ccdname) '{
+def limaeigersetup(ccdname) '{
 
   # --- common control init
   _limapar_controlinit(ccdname, 0)
 
   # --- callback macro on parameter set
-  _limapar_addconfig_cb(ccdname, "_limaimeiger_setpar")
+  _limapar_addconfig_cb(ccdname, "_limaeiger_setpar")
 
   # --- parameter definition
   _limapar_addconfig(ccdname, "temperature", LP_RW, 1)
   _limapar_addconfig(ccdname, "humidity", LP_RW, 1)
   _limapar_addconfig(ccdname, "plugin_status", LP_RD|LP_LIST, 1)
+  _limapar_addconfig(ccdname, "high_voltage_state", LP_RD|LP_LIST, 1)
   _limapar_addconfig(ccdname, "cam_status", LP_RD|LP_LIST, 1)
   _limapar_addconfig(ccdname, "stream_stats", LP_RD, 4, "double")
 
@@ -26,8 +27,11 @@ def limaimeigersetup(ccdname) '{
   _limapar_addconfig(ccdname, "efficiency_correction", LP_RW|LP_LIST, 1)
   _limapar_addconfig(ccdname, "virtual_pixel_correction", LP_RW|LP_LIST, 1)
   _limapar_addconfig(ccdname, "pixel_mask", LP_RW|LP_LIST, 1)
+  _limapar_addconfig(ccdname, "retrigger", LP_RW|LP_LIST, 1)
   _limapar_addconfig(ccdname, "compression_type", LP_RW|LP_LIST, 1)
   _limapar_addconfig(ccdname, "threshold_energy", LP_RW|LP_MOT, 1)
+  _limapar_addconfig(ccdname, "threshold_energy2", LP_RW|LP_MOT, 1)
+  _limapar_addconfig(ccdname, "threshold_diff_mode", LP_RW|LP_LIST, 1)
   _limapar_addconfig(ccdname, "photon_energy", LP_RW|LP_MOT, 1,"long")
   _limapar_addconfig(ccdname, "serie_id", LP_RD, 1,"long")
 
@@ -35,6 +39,7 @@ def limaimeigersetup(ccdname) '{
   _limapar_addtext(ccdname, "temperature", "Detector temperature")
   _limapar_addtext(ccdname, "humidity", "Detector humidity")
   _limapar_addtext(ccdname, "plugin_status", "Lima plugin status")
+  _limapar_addtext(ccdname, "high_voltage_state", "High voltage status")
   _limapar_addtext(ccdname, "cam_status", "Camera API status")
   _limapar_addtext(ccdname, "stream_stats", "Stream statistics")
 
@@ -44,8 +49,11 @@ def limaimeigersetup(ccdname) '{
   _limapar_addtext(ccdname, "efficiency_correction", "Efficiency correction")
   _limapar_addtext(ccdname, "virtual_pixel_correction", "Virtual pixel correction")
   _limapar_addtext(ccdname, "pixel_mask", "Pixel mask")
+  _limapar_addtext(ccdname, "retrigger", "Retrigger mode")
   _limapar_addtext(ccdname, "compression_type", "Compression type")
   _limapar_addtext(ccdname, "threshold_energy", "Threshold Energy (Ev)")
+  _limapar_addtext(ccdname, "threshold_energy2", "2nd Threshold Energy (Ev)")
+  _limapar_addtext(ccdname, "threshold_diff_mode", "Threshold differential mode")
   _limapar_addtext(ccdname, "photon_energy", "Photon energy (Working energy in Ev)")
   _limapar_addtext(ccdname, "serie_id", "Filewriter file name serie ID")
 
@@ -56,19 +64,22 @@ def limaimeigersetup(ccdname) '{
   _limapar_addconfig(ccdname, "delete_memory_files", LP_RD, 1,"long")
   _limapar_addtext(ccdname, "delete_memory_files", "Delete files in DCU memory")
 
+  _limapar_addconfig(ccdname, "reset_high_voltage", LP_RD, 1,"long")
+  _limapar_addtext(ccdname, "reset_high_voltage", "switch off/on the high-voltage (CdTe sensors only")
+
   # --- timeout
   tango_io(LIMA_DEV[ccdname]["control"],"timeout",120)
 }'
 
-lima_addlimatype("Eiger", "limaimeigersetup", "limaimeigermenu")
+lima_addlimatype("Eiger", "limaeigersetup", "limaeigermenu")
 
-def _limaimeiger_setpar(ccdname, parname, value) '{
+def _limaeiger_setpar(ccdname, parname, value) '{
   if (parname == "auto_summation") {
-    _limaimeiger_update_image_size(ccdname)
+    _limaeiger_update_image_size(ccdname)
   }
 }'
 
-def _limaimeiger_update_image_size(ccdname) '{
+def _limaeiger_update_image_size(ccdname) '{
    #need to inform SPEC about possible image type change
    local unit
    unit  = LIMA_DEV[ccdname]["unit"]
@@ -80,13 +91,14 @@ def _limaimeiger_update_image_size(ccdname) '{
    ccd_createarray unit
 }'
 
-def limaimeigermenu(ccdname) '{
+def limaeigermenu(ccdname) '{
   local items[] aux_arr[] parname stream_stats
   local nl option
 
   items["temperature"] = ""
   items["humidity"] = ""
   items["plugin_status"] = ""
+  items["high_voltage_state"] = ""
   items["cam_status"] = ""
   items["countrate_correction"] = ""
   items["flatfield_correction"] = ""
@@ -94,8 +106,11 @@ def limaimeigermenu(ccdname) '{
   items["efficiency_correction"] = ""
   items["virtual_pixel_correction"] = ""
   items["pixel_mask"] = ""
+  items["retrigger"] = ""
   items["compression_type"] = ""
   items["threshold_energy"] = ""
+  items["threshold_energy2"] = ""
+  items["threshold_diff_mode"] = ""
   items["photon_energy"] = ""
   items["serie_id"] = ""
 
@@ -123,26 +138,31 @@ def limaimeigermenu(ccdname) '{
       _limamenu_printitem(ccdname, "efficiency_correction", items["efficiency_correction"], nl++, 14)
       _limamenu_printitem(ccdname, "virtual_pixel_correction", items["virtual_pixel_correction"], nl++, 15)
       _limamenu_printitem(ccdname, "pixel_mask", items["pixel_mask"], nl++, 16)
-      _limamenu_printitem(ccdname, "compression_type", items["compression_type"], nl++, 17)
+      _limamenu_printitem(ccdname, "retrigger", items["retrigger"], nl++, 17)
+      _limamenu_printitem(ccdname, "compression_type", items["compression_type"], nl++, 18)
 
       tty_move(0,++nl,"(2) Calibration :")
       ++nl
       _limamenu_printitem(ccdname, "photon_energy", items["photon_energy"], nl++, 21)
       _limamenu_printitem(ccdname, "threshold_energy", items["threshold_energy"], nl++, 22)
+      _limamenu_printitem(ccdname, "threshold_energy2", items["threshold_energy2"], nl++, 23)
+      _limamenu_printitem(ccdname, "threshold_diff_mode", items["threshold_diff_mode"], nl++, 24)
 
       tty_move(0,++nl,"(3) Detector status :")
       ++nl
-      _limamenu_printitem(ccdname, "temperature", items["temperature"], nl++, 31)
-      _limamenu_printitem(ccdname, "humidity", items["humidity"], nl++, 33)
-      _limamenu_printitem(ccdname, "serie_id", items["serie_id"], nl++, 34)
-      _limamenu_printitem(ccdname, "plugin_status", items["plugin_status"], nl++, 35)
-      _limamenu_printitem(ccdname, "cam_status", items["cam_status"], nl++, 36)
-      _limamenu_printitem(ccdname, "stream_stats", stream_stats, nl++, 37)
+      _limamenu_printitem(ccdname, "temperature", items["temperature"], nl++, -1)
+      _limamenu_printitem(ccdname, "humidity", items["humidity"], nl++, -1)
+      _limamenu_printitem(ccdname, "serie_id", items["serie_id"], nl++, -1)
+      _limamenu_printitem(ccdname, "plugin_status", items["plugin_status"], nl++, -1)
+      _limamenu_printitem(ccdname, "cam_status", items["cam_status"], nl++, -1)
+      _limamenu_printitem(ccdname, "high_voltage_state", items["high_voltage_state"], nl++, -1)
+      _limamenu_printitem(ccdname, "stream_stats", stream_stats, nl++, -1)
 
       tty_move(0,++nl,"(4) Detector commands :")
       ++nl
-      _limamenu_printitem(ccdname, "initialize", "", nl++, 41)
-      _limamenu_printitem(ccdname, "delete_memory_files", "", nl++, 42)
+      tty_move(0,nl++,"     (41) initialize")
+      tty_move(0,nl++,"     (42) delete_memory_files")
+      tty_move(0,nl++,"     (43) reset_high_voltage")
 
       option= getval("\n\n\tOption ---> ", 0)
       printf("\n\n")
@@ -160,28 +180,37 @@ def limaimeigermenu(ccdname) '{
       if ((option==1)||(option==16))
 	  _limapar_ask(ccdname, "pixel_mask", items["pixel_mask"])
       if ((option==1)||(option==17))
+	  _limapar_ask(ccdname, "retrigger", items["retrigger"])
+      if ((option==1)||(option==18))
 	  _limapar_ask(ccdname, "compression_type", items["compression_type"])
 
       if ((option==2)||(option==21))
 	  _limapar_ask(ccdname, "photon_energy", items["photon_energy"])
       if ((option==2)||(option==22))
-	  _limapar_ask(ccdname, "threshold_energy", items["threshold_energy"])
+	  _limapar_ask(ccdname, "threshold_energy (eV)", items["threshold_energy"])
+      if ((option==2)||(option==23))
+	  _limapar_ask(ccdname, "threshold_energy2 (eV)", items["threshold_energy2"])
+      if ((option==2)||(option==24))
+	  _limapar_ask(ccdname, "threshold_diff_mode", items["threshold_diff_mode"])
 
       if (option==41) {
           if (yesno("Do you want to initialize the detector", 0)) {
-            _limaimeiger_initialize_worker(ccdname)
+            _limaeiger_initialize_worker(ccdname)
             getval("Press Enter to continue", "")
 	  }
       } else if (option==42) {
-          if (yesno("Do you want to initialize the detector", 0))
-            _limaimeiger_delete_memory_files_worker(ccdname)
+          if (yesno("Do you want to delete files on DCU", 0))
+            _limaeiger_delete_memory_files_worker(ccdname)
+      } else if (option==43) {
+          if (yesno("Do you want to reset high-voltage", 0))
+            _limaeiger_reset_high_voltage_worker(ccdname)
       }
   }
 
 
 }'
 
-def limaimeigerdeleteMemoryFiles '{
+def limaeigerdeletememoryfiles '{
   if ($# < 1) {
     print "Usage: $0 <ccdname>"
     exit
@@ -189,14 +218,14 @@ def limaimeigerdeleteMemoryFiles '{
 
   local  ccdname
   ccdname = "$1"
-  _limaimeiger_delete_memory_files_worker(ccdname)
+  _limaeiger_delete_memory_files_worker(ccdname)
 }'
 
-def _limaimeiger_delete_memory_files_worker(ccdname) '{
+def _limaeiger_delete_memory_files_worker(ccdname) '{
   tango_io(LIMA_DEV[ccdname]["config"],"deleteMemoryFiles")
 }'
 
-def limaimeigerinitialize '{
+def limaeigerinitialize '{
   if ($# < 1) {
     print "Usage: $0 <ccdname>"
     exit
@@ -204,10 +233,10 @@ def limaimeigerinitialize '{
 
   local ccdname
   ccdname = "$1"
-  _limaimeiger_initialize_worker(ccdname)
+  _limaeiger_initialize_worker(ccdname)
 }'
 
-def _limaimeiger_initialize_worker(ccdname) '{
+def _limaeiger_initialize_worker(ccdname) '{
   local status
   tango_io(LIMA_DEV[ccdname]["config"],"initialize")
   printf("\n\n")
@@ -219,7 +248,33 @@ def _limaimeiger_initialize_worker(ccdname) '{
     sleep(0.5)
   }
   printf("\n\n")
-  _limaimeiger_update_image_size(ccdname)
+  _limaeiger_update_image_size(ccdname)
+}'
+
+def limaeigerresethighvoltage '{
+  if ($# < 1) {
+    print "Usage: $0 <ccdname>"
+    exit
+  }
+
+  local ccdname
+  ccdname = "$1"
+  _limaeiger_reset_high_voltage_worker(ccdname)
+}'
+
+def _limaeiger_reset_high_voltage_worker(ccdname) '{
+  local status
+  tango_io(LIMA_DEV[ccdname]["config"],"resetHighVoltage")
+  printf("\n\n")
+  while (1) {
+    sleep(0.5)
+    status = _limapar_get(ccdname, "high_voltage_state")
+    printf("High voltage status: %s       \r", status)
+    if (status == "READY")
+      break
+    sleep(0.5)
+  }
+  printf("\n\n")
 }'
 
 #%MACROS%

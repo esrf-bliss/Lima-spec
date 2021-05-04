@@ -1,0 +1,71 @@
+#%NAME% 
+#  Specific macros for Lima TUCSEN Dhyana detector 
+#%CATEGORY% Detection, Ccd
+
+#%LOG%
+#
+#
+
+def limadhyanasetup(ccdname) '{
+
+  # --- common control init
+  _limapar_controlinit(ccdname, 0)
+
+  # --- parameter definition
+
+  _limapar_addconfig(ccdname, "fan_speed",LP_RW,1)
+  _limapar_addconfig(ccdname, "temperature_target", LP_RW, 1)
+  _limapar_addconfig(ccdname, "temperature", LP_READ, 1)
+  _limapar_addconfig(ccdname, "global_gain", LP_RW, 1)
+
+  # --- parameter description
+  _limapar_addtext(ccdname, "fan_speed", "FAN speed")
+  _limapar_addtext(ccdname, "temperature_target", "Temperature Target (C)")  
+  _limapar_addtext(ccdname, "temperature", "Sensor Temperature")  
+  _limapar_addtext(ccdname, "global_gain", "Global Gain")  
+}'
+
+lima_addlimatype("Dhyana", "limadhyanasetup", "limadhyanamenu")
+
+
+def limadhyanamenu(ccdname) '{
+  local items[] parname
+  local nl option
+  
+  items["fan_speed"] = -1
+  items["temperature_target"] = -1
+  items["temperature"] = -1
+  items["global_gain"] = -1
+  
+  option= 1
+  
+  while (option) {
+    
+    for (parname in items) {
+      items[parname]= _limapar_get(ccdname, parname)
+    }
+    nl = _limamenu_printtitle(ccdname, "Configuration", "config")
+    
+    tty_move(0, nl++, "(1) Temperature Control :")
+    tty_move(4, nl++, sprintf(" Sensor @  \[md\]%.2f\[me\] C, FAN speed @ %d \%", items["temperature"], items["fan_speed"]))
+    _limamenu_printitem(ccdname, "temperature_target", items["temperature_target"], nl++,11)
+    nl++
+    tty_move(0, nl++, "(2) Sensor Control :")
+    _limamenu_printitem(ccdname, "global_gain", items["global_gain"], nl++,21)
+
+    option= getval("\n\n\tOption ---> ", 0)
+    printf("\n\n")
+
+
+    if(option=="r")
+      continue
+    if((option==1) || (option==11))
+      _limapar_ask(ccdname, "temperature_target",items["temperature_target"])
+    if((option==2) || (option==21))
+      _limapar_ask(ccdname, "global_gain",items["global_gain"])
+  }
+}'
+#%MACROS%
+#%IMACROS%
+#%TOC%
+#%AUTHOR% L.Claustre 30.04.2021

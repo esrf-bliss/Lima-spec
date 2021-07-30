@@ -16,13 +16,17 @@ def limadhyanasetup(ccdname) '{
   _limapar_addconfig(ccdname, "fan_speed",LP_RW,1)
   _limapar_addconfig(ccdname, "temperature_target", LP_RW, 1)
   _limapar_addconfig(ccdname, "temperature", LP_READ, 1)
-  _limapar_addconfig(ccdname, "global_gain", LP_RW, 1)
+  _limapar_addconfig(ccdname, "global_gain", LP_RW|LP_LIST, 1)
+  _limapar_addconfig(ccdname, "trigger_mode", LP_RW|LP_LIST, 1)
+  _limapar_addconfig(ccdname, "trigger_edge", LP_RW|LP_LIST, 1)
 
   # --- parameter description
   _limapar_addtext(ccdname, "fan_speed", "FAN speed")
   _limapar_addtext(ccdname, "temperature_target", "Temperature Target (C)")  
   _limapar_addtext(ccdname, "temperature", "Sensor Temperature")  
   _limapar_addtext(ccdname, "global_gain", "Global Gain")  
+  _limapar_addtext(ccdname, "trigger_mode", "Trigger Mode")  
+  _limapar_addtext(ccdname, "trigger_edge", "Trigger Edge")  
 }'
 
 lima_addlimatype("Dhyana", "limadhyanasetup", "limadhyanamenu")
@@ -36,6 +40,8 @@ def limadhyanamenu(ccdname) '{
   items["temperature_target"] = -1
   items["temperature"] = -1
   items["global_gain"] = -1
+  items["trigger_mode"] = "" 
+  items["trigger_edge"] = "" 
   
   option= 1
   
@@ -47,11 +53,13 @@ def limadhyanamenu(ccdname) '{
     nl = _limamenu_printtitle(ccdname, "Configuration", "config")
     
     tty_move(0, nl++, "(1) Temperature Control :")
-    tty_move(4, nl++, sprintf(" Sensor @  \[md\]%.2f\[me\] C, FAN speed @ %d \%", items["temperature"], items["fan_speed"]))
+    tty_move(4, nl++, sprintf(" (r) Sensor @  \[md\]%.2f\[me\] C, FAN speed @ %d \%", items["temperature"], items["fan_speed"]))
     _limamenu_printitem(ccdname, "temperature_target", items["temperature_target"], nl++,11)
     nl++
     tty_move(0, nl++, "(2) Sensor Control :")
     _limamenu_printitem(ccdname, "global_gain", items["global_gain"], nl++,21)
+    _limamenu_printitem(ccdname, "trigger_mode", items["trigger_moe"], nl++,22)
+    _limamenu_printitem(ccdname, "trigger_edge", items["trigger_edge"], nl++,23)
 
     option= getval("\n\n\tOption ---> ", 0)
     printf("\n\n")
@@ -63,9 +71,13 @@ def limadhyanamenu(ccdname) '{
       _limapar_ask(ccdname, "temperature_target",items["temperature_target"])
     if((option==2) || (option==21))
       _limapar_ask(ccdname, "global_gain",items["global_gain"])
+    if((option==2) || (option==22))
+      _limapar_ask(ccdname, "trigger_mode",items["trigger_mode"])
+    if((option==2) || (option==23))
+      _limapar_ask(ccdname, "trigger_edge",items["trigger_edge"])
   }
 }'
 #%MACROS%
 #%IMACROS%
 #%TOC%
-#%AUTHOR% L.Claustre 30.04.2021
+#%AUTHOR% L.Claustre 30.04.2021, last modified 30.07.2021

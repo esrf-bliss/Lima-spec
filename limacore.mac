@@ -64,7 +64,7 @@ def limasetup '{
   list_test LIMA_DEV
 
   limaroisetup
-
+  
   # --- hook to ccd.mac setup menu
   cdef("_user_ccd_private_menu", "_limamenu_ccdprivate\n", "lima")
 
@@ -183,9 +183,6 @@ def limaccdsetup '{
 
   # -- for ccd.mac
   CCD_DS_CONTR[LIMA_DEV[ccdname]["unit"]]= "LIMA"
-
-  # bpm for each lima ccd
-  limabpmsetup $1
 
   setup_tail("limaccd", ccdname)
 }'

@@ -509,7 +509,6 @@ def _limabpm_server_getds(ccdname) '{
 #
 def limabpmon '{
     local ccdname bpmdev state
-    print $#
     if ($#!= 1) {
         print "Usage: $0 <ccdname>"
         exit
@@ -532,7 +531,7 @@ def limabpmoff '{
         print "Usage: $0 <ccdname>"
         exit
     }
-    ccdname = _limabpm_checkccdname("$1")
+    ccdname = _lima_checkccdname("$1")
     bpmdev = LIMA_DEV[ccdname]["bpmdev"]
     tango_io(bpmdev, "Stop")
 }'
@@ -552,7 +551,7 @@ def limabpmbackground '{
         print "Usage: $0 <ccdname> [\"take\"|\"reset\"|\"status\"]"
         exit
     }
-    ccdname= _limabpm_checkccdname("$1")
+    ccdname= _lima_checkccdname("$1")
     bgcmd= $#>1 ? "$2" : "status"
 
     bpmdev= LIMA_DEV[ccdname]["bpmdev"]

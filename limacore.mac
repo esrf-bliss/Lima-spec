@@ -181,6 +181,10 @@ def limaccdsetup '{
     }
   }
 
+  # Force no cache on attribute reading, otherwise if the camera as a polling activated like on acq_status (bpm-web-server !!)
+  # tango_get() will read a cache value instead of device direct value.
+  tango_io( LIMA_DEV[ccdname]["control"], "source", 0)
+  
   # -- for ccd.mac
   CCD_DS_CONTR[LIMA_DEV[ccdname]["unit"]]= "LIMA"
 

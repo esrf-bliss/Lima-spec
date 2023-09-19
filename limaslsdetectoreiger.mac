@@ -1,5 +1,5 @@
 #%NAME% 
-#  Specific macros for Lima SlsDetector 
+#  Specific macros for Lima SlsDetectorEiger 
 #%CATEGORY% Detection, Ccd
 
 #%LOG%
@@ -7,7 +7,7 @@
 #$Revision: $
 #
 
-def _limaslsdetector_setup(ccdname) '{
+def _limaslsdetectoreiger_setup(ccdname) '{
   local aux_n aux_s aux_d aux_k i
 
   # --- common control init
@@ -38,7 +38,7 @@ def _limaslsdetector_setup(ccdname) '{
   _limapar_addconfig(ccdname, "bad_frame_list", LP_READ|LP_LIST, 100000)
 
   # --- callback macro on parameter set
-  _limapar_addconfig_cb(ccdname, "_limaslsdetector_setpar")
+  _limapar_addconfig_cb(ccdname, "_limaslsdetectoreiger_setpar")
 
   # --- parameter description
   _limapar_addtext(ccdname, "config_fname", "Configuration file name")
@@ -84,23 +84,23 @@ def _limaslsdetector_setup(ccdname) '{
 
 }'
 
-cdef("_limapar_set_pre_hook",  "_limaslsdetector_pre_par_set\n",  "slsdetector")
-cdef("_limapar_set_post_hook", "_limaslsdetector_post_par_set\n", "slsdetector")
+cdef("_limapar_set_pre_hook",  "_limaslsdetectoreiger_pre_par_set\n",  "slsdetectoreiger")
+cdef("_limapar_set_post_hook", "_limaslsdetectoreiger_post_par_set\n", "slsdetectoreiger")
 
-lima_addlimatype("SlsDetector", "_limaslsdetector_setup", \
-                                "_limaslsdetector_menu")
+lima_addlimatype("SlsDetectorEiger", "_limaslsdetectoreiger_setup", \
+                                "_limaslsdetectoreiger_menu")
 
-def _limaslsdetector_pre_par_set '{
-  if (LIMA_DEV[ccdname]["type"] == "SlsDetector") {
+def _limaslsdetectoreiger_pre_par_set '{
+  if (LIMA_DEV[ccdname]["type"] == "SlsdetectoreigerEiger") {
   }
 }'
 
-def _limaslsdetector_post_par_set '{
-  if (LIMA_DEV[ccdname]["type"] == "SlsDetector") {
+def _limaslsdetectoreiger_post_par_set '{
+  if (LIMA_DEV[ccdname]["type"] == "SlsdetectoreigerEiger") {
   }
 }'
 
-def _limaslsdetector_setpar(ccdname, parname, value) '{
+def _limaslsdetectoreiger_setpar(ccdname, parname, value) '{
   if ((parname == "pixel_depth") || (parname == "raw_mode")) {
     # inform SPEC about possible image type/size change
     local unit
@@ -113,7 +113,7 @@ def _limaslsdetector_setpar(ccdname, parname, value) '{
   }
 }'
 
-def _limaslsdetector_menu(ccdname) '{
+def _limaslsdetectoreiger_menu(ccdname) '{
   local items[] aitems[] parname i aux_s aux_n val
   local nl option
 
@@ -213,25 +213,25 @@ def _limaslsdetector_menu(ccdname) '{
       _limapar_ask(ccdname, "threshold_energy", items["threshold_energy"])
 
     if (option == 4)
-      _limaslsdetector_dac_menu(ccdname)
+      _limaslsdetectoreiger_dac_menu(ccdname)
 
     if (option == 5)
-      _limaslsdetector_monitor_menu(ccdname)
+      _limaslsdetectoreiger_monitor_menu(ccdname)
   }
 }'
 
-def _limaslsdetector_nb_modules(ccdname) '{
+def _limaslsdetectoreiger_nb_modules(ccdname) '{
   return _limapar_get(ccdname, "hostname_list", -1)
 }'
 
-def _limaslsdetector_module_name(ccdname, idx) '{
+def _limaslsdetectoreiger_module_name(ccdname, idx) '{
   return _limapar_get(ccdname, "hostname_list", idx)
 }'
 
-def _limaslsdetector_set_dac_trim_bits(ccdname, parname, idx, val) '{
+def _limaslsdetectoreiger_set_dac_trim_bits(ccdname, parname, idx, val) '{
   local devname arrname nbdet alen aidx txt dets
   devname = _limapar_getdevname(ccdname, parname)
-  nbdet = _limaslsdetector_nb_modules(ccdname)
+  nbdet = _limaslsdetectoreiger_nb_modules(ccdname)
 
   if ((idx < -1) || (idx >= nbdet)) {
     printf("Invalid DAC detector index: %s\n", idx)
@@ -241,7 +241,7 @@ def _limaslsdetector_set_dac_trim_bits(ccdname, parname, idx, val) '{
   arrname = LIMA_DEV[ccdname]["arrname"]
   txt = @arrname[parname]["desc"]
   if (idx >= 0)
-    dets = sprintf("module %s", _limaslsdetector_module_name(ccdname, idx))
+    dets = sprintf("module %s", _limaslsdetectoreiger_module_name(ccdname, idx))
   else
     dets = "all modules"
   printf("Setting %s to %s on %s...\n", txt, val, dets)
@@ -256,17 +256,17 @@ def _limaslsdetector_set_dac_trim_bits(ccdname, parname, idx, val) '{
   printf("Done!\n")
 }'
 
-def _limaslsdetector_ask_dac_trim_bits(ccdname, parname, idx) '{
+def _limaslsdetectoreiger_ask_dac_trim_bits(ccdname, parname, idx) '{
   local ret[]
 
-  ret = _limaslsdetector_ask_mod_idx_val(ccdname, parname, idx)
+  ret = _limaslsdetectoreiger_ask_mod_idx_val(ccdname, parname, idx)
   if (ret["idx"] != -2)
-    _limaslsdetector_set_dac_trim_bits(ccdname, parname, ret["idx"], ret["val"])
+    _limaslsdetectoreiger_set_dac_trim_bits(ccdname, parname, ret["idx"], ret["val"])
 
   input("Type Enter to continue ...")
 }'
 
-def _limaslsdetector_ask_mod_idx_val(ccdname, parname, idx) '{
+def _limaslsdetectoreiger_ask_mod_idx_val(ccdname, parname, idx) '{
   local arrname txt val val2 new_val all_eq aux_n i ret[]
 
   arrname = LIMA_DEV[ccdname]["arrname"]
@@ -297,11 +297,11 @@ def _limaslsdetector_ask_mod_idx_val(ccdname, parname, idx) '{
   return ret
 }'
 
-def _limaslsdetector_dac_menu(ccdname) '{
+def _limaslsdetectoreiger_dac_menu(ccdname) '{
   local items[] parname i dac_n dac_name[] aux_n aux_s is_dac
   local nl option foption loption
 
-  global LIMA_SLSDETECTOR[]
+  global LIMA_SLSDETECTOREIGER[]
 
   dac_n = _limapar_get(ccdname, "dac_name_list", -1)
   for (i = 0; i < dac_n; i++) {
@@ -352,15 +352,15 @@ def _limaslsdetector_dac_menu(ccdname) '{
     if ((option == 2) || ((option >= foption) && (option < loption))) {
       i = option - foption
       parname = dac_name[i]
-      _limaslsdetector_ask_dac_trim_bits(ccdname, parname, -2)
+      _limaslsdetectoreiger_ask_dac_trim_bits(ccdname, parname, -2)
     }
 
     if ((option == 3) || (option == 31))
-      _limaslsdetector_ask_dac_trim_bits(ccdname, "all_trim_bits", -2)
+      _limaslsdetectoreiger_ask_dac_trim_bits(ccdname, "all_trim_bits", -2)
   }
 }'
 
-def _limaslsdetector_monitor_menu(ccdname) '{
+def _limaslsdetectoreiger_monitor_menu(ccdname) '{
   local items[] parname i adc_n adc_name[] aux_n aux_s aux_f is_adc
   local nl option
 
@@ -409,7 +409,7 @@ def slsdetmot_config(mnum, type, unit, module, channel) '{
 
   ccdname = slsdetmot_ADDR
   if (type == "ctrl") {
-    printf("Using Lima SlsDetector motor on %s\n", ccdname)
+    printf("Using Lima SlsdetectoreigerEiger motor on %s\n", ccdname)
   }
 
 }'

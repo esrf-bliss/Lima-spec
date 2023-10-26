@@ -12,6 +12,7 @@ def limamulttrigsetup '{
     trig_gen = ($# > 1) ? "$2" : getval("Trigger generator [SOFT|CT2|OPIOM]", \
                                         trig_gen)
     if ((trig_gen != "SOFT") && (trig_gen != "CT2") && (trig_gen != "OPIOM")) {
+        _lima_error lima_name
         printf("Invalid trigger generator: %s. Can be SOFT|CT2|OPIOM\n", \
                trig_gen)
         exit
@@ -23,6 +24,7 @@ def limamulttrigsetup '{
         msg = (trig_gen == "CT2") ? "P201 CT2 counter name" : "OPIOM name"
         trig_dev = ($# > 2) ? "$3" : getval(msg, trig_dev)
         if (trig_dev == "") {
+            _lima_error lima_name
             printf("Invalid %s: %s\n", msg, trig_dev)
             exit
         }
@@ -91,17 +93,16 @@ def limamulttrigscanoff_func(lima_name) '{
 }'
 
 def lima_mult_trig_head() '{
-    local lima_name i nb_points msg_printed
+    local lima_name i nb_points 
 
     nb_points = (_stype & scanType_MeshScan) ? (_n1 * _n2) : _n1
     #nb_points = array_op("rows", SCAN_POINTS)
-    msg_printed = 0
     for (i = 1; i <= list_n(LIMA_DEV); i++) {
     	if (list_getpar(LIMA_DEV, i, "mult_trig") > 0) {
-	    if (!msg_printed)
-                printf("Mult-Trig scan nb_points=%d\n", nb_points)
-	    msg_printed = 1
 	    lima_name = list_item(LIMA_DEV, i)
+            _lima_trace lima_name
+            printf("Multi-Trigger scan for %d points\n", nb_points)
+	    msg_printed = 1
 	    lima_mult_trig_on(lima_name, nb_points)
 	}
     }
@@ -125,7 +126,7 @@ def lima_mult_trig_tail(from_cleanup) '{
 
 def lima_mult_trig_on(lima_name, nb_points) '{
     local lima_n ccd_u taco_dev tango_dev trig_gen is_soft good_soft
-    local lima_acq_mode lima_trig_mode ccd_trig_mode prev_ccd_trig_mode
+    local lima_acq_mode lima_trig_mode ccd_trig_mode
     local det_exp det_dtime det_pulses skip_frame_freq
     
     lima_n = list_check(LIMA_DEV, lima_name)
@@ -137,25 +138,24 @@ def lima_mult_trig_on(lima_name, nb_points) '{
     lima_trig_mode = _limapar_get(lima_name, "acq_trigger_mode")
     good_soft = (lima_trig_mode == "INTERNAL_TRIGGER")
     if (is_soft != good_soft) {
-        printf("Error: %s in %s and mult-trig generator is %s\n", \
+        _lima_error lima_name
+        printf("%s in %s and mult-trig generator is %s\n", \
                lima_name, lima_trig_mode, trig_gen)
         exit
     }
 
     ccd_u = list_getpar(LIMA_DEV, lima_n, "unit")
-    ccd_trig_mode = prev_ccd_trig_mode = image_par(ccd_u, "ext_trig")
+    ccd_trig_mode = image_par(ccd_u, "ext_trig")
     if (lima_trig_mode == "INTERNAL_TRIGGER") {
         lima_trig_mode = "INTERNAL_TRIGGER_MULTI"
     } else if (lima_trig_mode == "EXTERNAL_TRIGGER") {
         lima_trig_mode = "EXTERNAL_TRIGGER_MULTI"
 	ccd_trig_mode = 2
     }
+    image_par(ccd_u, "ext_trig", ccd_trig_mode)
+    CCD_TRIG[ccd_u] = ccd_trig_mode
     if (!_limapar_set(lima_name, "acq_trigger_mode", lima_trig_mode))
         exit
-
-    if (ccd_trig_mode != prev_ccd_trig_mode)
-        image_par(ccd_u, "ext_trig", ccd_trig_mode)
-    CCD_TRIG[ccd_u] = ccd_trig_mode
 
     taco_dev = image_par(ccd_u, "device_id")
     taco_io(taco_dev, "DevCcdSetMultTrigNbFrames", nb_points)
@@ -167,7 +167,8 @@ def lima_mult_trig_on(lima_name, nb_points) '{
     lima_acq_mode = _limapar_get(lima_name, "acq_mode")
     if (lima_acq_mode == "ACCUMULATION") {
         if (is_soft) {
-            printf("Error: %s acq_mode/trig_mode is %s/%s. %s\n", \
+            _lima_error lima_name
+            printf("%s acq_mode/trig_mode is %s/%s. %s\n", \
                    lima_name, lima_acq_mode, lima_trig_mode, \
                    "Mult-trig scan not supported")
             exit
@@ -180,7 +181,11 @@ def lima_mult_trig_on(lima_name, nb_points) '{
         }
         det_pulses = _limapar_get(lima_name, "acc_nb_frames")
         det_exp = _limapar_get(lima_name, "acc_live_time") / det_pulses
-        det_dtime = _limapar_get(lima_name, "latency_time")
+        det_dtime = _limapar_get(lima_name, "acc_dead_time") / (det_pulses - 1)
+
+        _lima_trace lima_name
+        printf("accumulation with %s: up=%s, down=%s, pulses=%s\n", trig_gen, \
+                det_exp, det_dtime, det_pulses)
     }
 
     skip_frame_freq = 0
@@ -188,6 +193,7 @@ def lima_mult_trig_on(lima_name, nb_points) '{
         skip_frame_freq = det_pulses++
     if (skip_frame_freq) {
         if (is_soft) {
+            _lima_error lima_name
             printf("Error: %s mult-trig scan needs CT2/OPIOM\n", lima_name)
             exit
         }
@@ -195,8 +201,6 @@ def lima_mult_trig_on(lima_name, nb_points) '{
     }
     list_setpar(LIMA_DEV, lima_n, "skip_frame_freq", skip_frame_freq)
 
-    printf("%s: up=%s, down=%s, pulses=%s\n", trig_gen, \
-           det_exp, det_dtime, det_pulses)
     if (trig_gen == "CT2")
         lima_mult_trig_ct2_set(lima_name, det_exp, det_dtime, det_pulses)
     else if (trig_gen == "OPIOM")
@@ -247,7 +251,7 @@ def lima_mult_trig_off(lima_name) '{
 }'
 
 def lima_mult_trig_ct2_default(lima_name) '{
-    lima_mult_trig_ct2_set(lima_name, -1, 0, 1)
+    lima_mult_trig_ct2_set(lima_name, 1, 0, 1)
 }'
 
 def lima_mult_trig_ct2_set(lima_name, det_exp, det_dtime, det_pulses) '{
@@ -283,7 +287,9 @@ def lima_mult_trig_opiom_set(lima_name, det_exp, det_dtime, det_pulses) '{
                         opiom_cnt, opiom_clock, opiom_trig_input, \
                         opiom_up, opiom_down, det_pulses)
     opiom_res = isgdevice_comm_ack(opiom_name, opiom_cmd)
-    if (opiom_res != "OK")
+    if (opiom_res != "OK") {
+        _lima_error lima_name
         printf("ERROR: lima_mult_trig_opiom_set: opiom response: \"%s\"\n", \
                opiom_res)
+    }
 }'

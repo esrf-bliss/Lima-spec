@@ -8,18 +8,18 @@ def limamulttrigsetup '{
 
     trig_gen = list_getpar(LIMA_DEV, lima_n, "mult_trig_gen")
     if (!trig_gen)
-        trig_gen = "SOFT"
-    trig_gen = ($# > 1) ? "$2" : getval("Trigger generator [SOFT|CT2|OPIOM]", \
+        trig_gen = "SPEC"
+    trig_gen = ($# > 1) ? "$2" : getval("Trigger generator [SPEC|CT2|OPIOM]", \
                                         trig_gen)
-    if ((trig_gen != "SOFT") && (trig_gen != "CT2") && (trig_gen != "OPIOM")) {
+    if ((trig_gen != "SPEC") && (trig_gen != "CT2") && (trig_gen != "OPIOM")) {
         _lima_error lima_name
-        printf("Invalid trigger generator: %s. Can be SOFT|CT2|OPIOM\n", \
+        printf("Invalid trigger generator: %s. Can be SPEC|CT2|OPIOM\n", \
                trig_gen)
         exit
     }
     list_setpar(LIMA_DEV, lima_n, "mult_trig_gen", trig_gen)
 
-    if (trig_gen != "SOFT") {
+    if (trig_gen != "SPEC") {
         trig_dev = list_getpar(LIMA_DEV, lima_n, "mult_trig_dev")
         msg = (trig_gen == "CT2") ? "P201 CT2 counter name" : "OPIOM name"
         trig_dev = ($# > 2) ? "$3" : getval(msg, trig_dev)
@@ -40,6 +40,16 @@ def limamulttrigsetup '{
         limamulttrigscanon_func(lima_name)
     else
         limamulttrigscanoff_func(lima_name)
+}'
+
+def limamulttrigscan '{
+    local i state lima_name
+    for (i = 1; i <= list_n(LIMA_DEV); i++) {
+	lima_name = list_item(LIMA_DEV, i)
+    	state = (list_getpar(LIMA_DEV, i, "mult_trig") > 0) ? "ON" : "OFF"
+        _lima_trace lima_name
+        printf("Multi-Trigger scan is %s\n", state)
+    }
 }'
 
 def limamulttrigscanon '{
@@ -125,7 +135,7 @@ def lima_mult_trig_tail(from_cleanup) '{
 }'
 
 def lima_mult_trig_on(lima_name, nb_points) '{
-    local lima_n ccd_u taco_dev tango_dev trig_gen is_soft good_soft
+    local lima_n ccd_u taco_dev tango_dev trig_gen is_spec
     local lima_acq_mode lima_trig_mode ccd_trig_mode
     local det_exp det_dtime det_pulses skip_frame_freq
     
@@ -134,29 +144,36 @@ def lima_mult_trig_on(lima_name, nb_points) '{
         return
 
     trig_gen = list_getpar(LIMA_DEV, lima_n, "mult_trig_gen")
-    is_soft = (trig_gen == "SOFT")
-    lima_trig_mode = _limapar_get(lima_name, "acq_trigger_mode")
-    good_soft = (lima_trig_mode == "INTERNAL_TRIGGER")
-    if (is_soft != good_soft) {
-        _lima_error lima_name
-        printf("%s in %s and mult-trig generator is %s\n", \
-               lima_name, lima_trig_mode, trig_gen)
-        exit
-    }
 
     ccd_u = list_getpar(LIMA_DEV, lima_n, "unit")
     ccd_trig_mode = image_par(ccd_u, "ext_trig")
-    if (lima_trig_mode == "INTERNAL_TRIGGER") {
-        lima_trig_mode = "INTERNAL_TRIGGER_MULTI"
-    } else if (lima_trig_mode == "EXTERNAL_TRIGGER") {
+
+    is_spec = (trig_gen == "SPEC")
+    if (is_spec) {
+        if (ccd_trig_mode == 0) {
+            lima_trig_mode = "INTERNAL_TRIGGER_MULTI"
+        } else {
+            if (image_par(ccd_u, "soft_preset")) {
+                lima_trig_mode = "EXTERNAL_TRIGGER_MULTI"
+                ccd_trig_mode = 2
+            } else {
+                lima_trig_mode = "EXTERNAL_GATE"
+                ccd_trig_mode = 1
+            }
+        }
+    } else {
         lima_trig_mode = "EXTERNAL_TRIGGER_MULTI"
 	ccd_trig_mode = 2
     }
+
     image_par(ccd_u, "ext_trig", ccd_trig_mode)
     CCD_TRIG[ccd_u] = ccd_trig_mode
     if (!_limapar_set(lima_name, "acq_trigger_mode", lima_trig_mode))
         exit
 
+    _lima_trace lima_name
+    printf("Using %s trigger mode\n", lima_trig_mode)
+        
     taco_dev = image_par(ccd_u, "device_id")
     taco_io(taco_dev, "DevCcdSetMultTrigNbFrames", nb_points)
     list_setpar(LIMA_DEV, lima_n, "prev_mult_trig", 1)
@@ -166,7 +183,7 @@ def lima_mult_trig_on(lima_name, nb_points) '{
     det_pulses = 1
     lima_acq_mode = _limapar_get(lima_name, "acq_mode")
     if (lima_acq_mode == "ACCUMULATION") {
-        if (is_soft) {
+        if (is_spec) {
             _lima_error lima_name
             printf("%s acq_mode/trig_mode is %s/%s. %s\n", \
                    lima_name, lima_acq_mode, lima_trig_mode, \
@@ -192,7 +209,7 @@ def lima_mult_trig_on(lima_name, nb_points) '{
     if (_limapar_get(lima_name, "camera_type") == "SlsDetector")
         skip_frame_freq = det_pulses++
     if (skip_frame_freq) {
-        if (is_soft) {
+        if (is_spec) {
             _lima_error lima_name
             printf("Error: %s mult-trig scan needs CT2/OPIOM\n", lima_name)
             exit
@@ -209,6 +226,7 @@ def lima_mult_trig_on(lima_name, nb_points) '{
 
 def lima_mult_trig_off(lima_name) '{
     local lima_n trig_gen ccd_u taco_dev tango_dev
+    local lima_trig_mode ccd_trig_mode ccd_preset
 
     lima_n = list_check(LIMA_DEV, lima_name)
     if (list_getpar(LIMA_DEV, lima_n, "prev_mult_trig") <= 0)
@@ -227,16 +245,25 @@ def lima_mult_trig_off(lima_name) '{
     list_setpar(LIMA_DEV, lima_n, "prev_mult_trig", 0)
 
     lima_trig_mode = _limapar_get(lima_name, "acq_trigger_mode")
-    ccd_trig_mode = image_par(ccd_u, "ext_trig")
     if (lima_trig_mode == "INTERNAL_TRIGGER_MULTI") {
         lima_trig_mode = "INTERNAL_TRIGGER"
+        ccd_trig_mode = 0
+        ccd_preset = 1
     } else if (lima_trig_mode == "EXTERNAL_TRIGGER_MULTI") {
         lima_trig_mode = "EXTERNAL_TRIGGER"
 	ccd_trig_mode = 1
+        ccd_preset = 1
+    } else if (lima_trig_mode == "EXTERNAL_GATE") {
+        lima_trig_mode = "EXTERNAL_TRIGGER"
+        ccd_trig_mode = 1
+        ccd_preset = 0
     }
+
     _limapar_set(lima_name, "acq_trigger_mode", lima_trig_mode)
     image_par(ccd_u, "ext_trig", ccd_trig_mode)
     CCD_TRIG[ccd_u] = ccd_trig_mode
+    image_par(ccd_u, "soft_preset", ccd_preset)
+    CCD_SOFT_PRESET[ccd_u] = ccd_preset
 
     trig_gen = list_getpar(LIMA_DEV, lima_n, "mult_trig_gen")
     if (trig_gen == "CT2")
